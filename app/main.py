@@ -9,13 +9,14 @@ import app.model.agenda
 import app.model.setor
 import app.model.backlog
 
-from app.routers import arquivo_router
+from app.routers import arquivo_router, usuario_router
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 app.include_router(arquivo_router.router)
+app.include_router(usuario_router.router)
 
 @app.get("/test-db")
 def test_db_connection(db: Session = Depends(get_db)):

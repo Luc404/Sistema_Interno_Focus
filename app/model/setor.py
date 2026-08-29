@@ -13,3 +13,4 @@ class Setor(Base):
     data_criacao = Column(DateTime(timezone = True), default = lambda: datetime.now(timezone.utc))
 
     usuarios = relationship("Usuario", back_populates = "setor")
+    items_backlog = relationship("ItemBacklog", back_populates = "setor")
