@@ -1,19 +1,21 @@
 from pydantic import BaseModel
-from datetime import datetime
 from typing import Optional
+from datetime import datetime
 
-class MensalidadeBase(BaseModel):
+class MensalidadeClienteCreate(BaseModel):
     nome_cliente: str
     valor: float
     data_vencimento: datetime
+    status_pagamento: Optional[str] = "PENDENTE"  # ex: PENDENTE, PAGO, ATRASADO
     observacao: Optional[str] = None
 
-class MensalidadeCreate(MensalidadeBase):
-    pass
-
-class MensalidadeResponse(MensalidadeBase):
+class MensalidadeClienteResponse(BaseModel):
     id: int
+    nome_cliente: str
+    valor: float
+    data_vencimento: datetime
     status_pagamento: str
+    observacao: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -1,21 +1,26 @@
 from pydantic import BaseModel
-from datetime import datetime
 from typing import Optional
+from datetime import datetime
 
-class BacklogBase(BaseModel):
+class BacklogCreate(BaseModel):
     titulo: str
-    descricao: str
+    descricao: Optional[str] = None
     tipo: str
-    prioridade: Optional[str] = "MEDIA"
+    prioridade: Optional[str] = "MEDIA"  # ex: BAIXA, MEDIA, ALTA
+    status: Optional[str] = "PENDENTE"   # ex: PENDENTE, EM_ANDAMENTO, CONCLUIDO
+    setor_id: Optional[int] = None
+    autor_id: Optional[int] = None
 
-class BacklogCreate(BacklogBase):
-    autor_id: int
-    setor_id: int
-
-class BacklogResponse(BacklogCreate):
+class BacklogResponse(BaseModel):
     id: int
+    titulo: str
+    descricao: Optional[str] = None
+    tipo: str
+    prioridade: str
     status: str
     data_criacao: datetime
+    setor_id: Optional[int] = None
+    autor_id: Optional[int] = None
 
     class Config:
         from_attributes = True

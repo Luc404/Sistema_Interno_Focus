@@ -1,19 +1,18 @@
-from pydantic import BaseModel
-from datetime import datetime
+from pydantic import BaseModel, HttpUrl
 from typing import Optional
 
-class LinkBase(BaseModel):
+class LinkCreate(BaseModel):
     titulo: str
     url: str
     descricao: Optional[str] = None
+    usuario_id: Optional[int] = None
 
-class LinkCreate(LinkBase):
-    usuario_id: int
-
-class LinkResponse(LinkBase):
+class LinkResponse(BaseModel):
     id: int
-    usuario_id: int
-    data_criacao: datetime
+    titulo: str
+    url: str
+    descricao: Optional[str] = None
+    usuario_id: Optional[int] = None
 
     class Config:
         from_attributes = True

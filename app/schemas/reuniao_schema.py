@@ -1,20 +1,23 @@
 from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime
-from typing import Optional, List
 
-class ReuniaoBase(BaseModel):
+class ReuniaoCreate(BaseModel):
     titulo: str
+    descricao: Optional[str] = None
     data_hora_inicio: datetime
     data_hora_fim: datetime
-    descricao: Optional[str] = None
     link_reuniao: Optional[str] = None
-
-class ReuniaoCreate(ReuniaoBase):
     criador_id: int
-    participantes_ids: List[int] = []
 
-class ReuniaoResponse(ReuniaoBase):
+class ReuniaoResponse(BaseModel):
     id: int
+    titulo: str
+    descricao: Optional[str] = None
+    data_hora_inicio: datetime
+    data_hora_fim: datetime
+    link_reuniao: Optional[str] = None
     criador_id: int
+
     class Config:
         from_attributes = True

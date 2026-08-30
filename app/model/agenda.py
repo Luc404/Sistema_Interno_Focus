@@ -9,7 +9,7 @@ class MensalidadeCliente(Base):
     id = Column(Integer, primary_key=True, index=True)
     nome_cliente = Column(String(150), nullable=False)
     valor = Column(Numeric(10, 2), nullable=False)
-    date_vencimento = Column(DateTime(timezone=True), nullable=False)
+    data_vencimento = Column(DateTime(timezone=True), nullable=False)
     status_pagamento = Column(String(50), default="PENDENTE")
     observacao = Column(String(255), nullable=True)
 
