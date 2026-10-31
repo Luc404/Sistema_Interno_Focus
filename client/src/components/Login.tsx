@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { api, ApiError, saveTokens } from '../api/client'
+import type { Usuario } from '../api/types'
 import {
   IconBook,
   IconCalendar,
@@ -14,9 +16,11 @@ import {
 import ThemePicker from './ThemePicker'
 
 interface LoginProps {
-  onLogin: (name: string) => void
+  /** Chamado após autenticar e carregar os dados do usuário. */
+  onLogin: (usuario: Usuario) => void
 }
 
+/** Módulos exibidos no painel lateral ilustrativo da tela de login. */
 const modules = [
   { icon: IconGrid, name: 'Focus' },
   { icon: IconFolder, name: 'Arquivos' },
@@ -26,14 +30,55 @@ const modules = [
 ]
 
 export default function Login({ onLogin }: LoginProps) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  const [modoRegistro, setModoRegistro] = useState(false)
+  const [nome, setNome] = useState('')
+  const [email, setEmail] = useState('')
+  const [senha, setSenha] = useState('')
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const [carregando, setCarregando] = useState(false)
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (username.trim()) {
-      onLogin(username.trim())
+  /** Alterna entre login e criação do primeiro administrador. */
+  function alternarModo() {
+    setModoRegistro((valor) => !valor)
+    setErro(null)
+    setNome('')
+    setSenha('')
+  }
+
+  async function handleSubmit(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    const emailLimpo = email.trim()
+    if (!emailLimpo || !senha || (modoRegistro && !nome.trim())) return
+
+    setErro(null)
+    setCarregando(true)
+
+    try {
+      // O backend só permite o cadastro público enquanto o banco estiver vazio.
+      if (modoRegistro) {
+        await api.auth.registrar({
+          nome_completo: nome.trim(),
+          email: emailLimpo,
+          senha,
+          perfil: 'ADMIN',
+        })
+      }
+
+      const tokens = await api.auth.login(emailLimpo, senha)
+      saveTokens(tokens)
+
+      // O login devolve apenas tokens; buscamos o perfil em /auth/me.
+      const usuario = await api.auth.me()
+      onLogin(usuario)
+    } catch (error) {
+      setErro(
+        error instanceof ApiError
+          ? error.message
+          : 'Não foi possível acessar o sistema. Tente novamente.',
+      )
+    } finally {
+      setCarregando(false)
     }
   }
 
@@ -42,6 +87,7 @@ export default function Login({ onLogin }: LoginProps) {
       <div className="login-theme">
         <ThemePicker />
       </div>
+
       <aside className="login-brand">
         <div className="login-brand-top">
           <div className="logo-mark">
@@ -54,7 +100,11 @@ export default function Login({ onLogin }: LoginProps) {
         </div>
 
         <div className="login-brand-copy">
-          <h1>Uma só plataforma,<br />todo o sistema interno.</h1>
+          <h1>
+            Uma só plataforma,
+            <br />
+            todo o sistema interno.
+          </h1>
           <p>
             Arquivos, agenda, backlog, assistentes de IA e documentação —
             centralizados para o seu time Focus.
@@ -62,12 +112,12 @@ export default function Login({ onLogin }: LoginProps) {
         </div>
 
         <div className="login-modules">
-          {modules.map((m) => {
-            const Icon = m.icon
+          {modules.map((modulo) => {
+            const Icone = modulo.icon
             return (
-              <div className="login-module" key={m.name}>
-                <Icon size={18} />
-                <span>{m.name}</span>
+              <div className="login-module" key={modulo.name}>
+                <Icone size={18} />
+                <span>{modulo.name}</span>
                 <IconCheck size={15} className="login-module-check" />
               </div>
             )
@@ -94,19 +144,36 @@ export default function Login({ onLogin }: LoginProps) {
             <div className="logo-mark dark">
               <IconBook size={22} />
             </div>
-            <h2>Login</h2>
-            <p>Bem-vindo de volta. Acesse o sistema interno.</p>
+            <h2>{modoRegistro ? 'Primeiro acesso' : 'Login'}</h2>
+            <p>
+              {modoRegistro
+                ? 'Crie o administrador inicial do sistema.'
+                : 'Bem-vindo de volta. Acesse o sistema interno.'}
+            </p>
           </div>
 
           <form className="login-form" onSubmit={handleSubmit}>
+            {modoRegistro && (
+              <label className="field">
+                <span>Nome completo</span>
+                <input
+                  type="text"
+                  placeholder="Seu nome completo"
+                  autoComplete="name"
+                  value={nome}
+                  onChange={(evento) => setNome(evento.target.value)}
+                />
+              </label>
+            )}
+
             <label className="field">
-              <span>Usuário</span>
+              <span>E-mail</span>
               <input
-                type="text"
-                placeholder="Seu nome ou e-mail"
+                type="email"
+                placeholder="voce@focus.com"
                 autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={email}
+                onChange={(evento) => setEmail(evento.target.value)}
               />
             </label>
 
@@ -114,35 +181,57 @@ export default function Login({ onLogin }: LoginProps) {
               <span>Senha</span>
               <div className="field-password">
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={mostrarSenha ? 'text' : 'password'}
                   placeholder="••••••••"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={modoRegistro ? 'new-password' : 'current-password'}
+                  value={senha}
+                  onChange={(evento) => setSenha(evento.target.value)}
                 />
                 <button
                   type="button"
                   className="field-eye"
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                  onClick={() => setMostrarSenha((valor) => !valor)}
                 >
-                  {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
+                  {mostrarSenha ? <IconEyeOff size={18} /> : <IconEye size={18} />}
                 </button>
               </div>
             </label>
 
+            {erro && (
+              <p className="form-error" role="alert">
+                {erro}
+              </p>
+            )}
+
             <div className="login-form-row">
-              <label className="remember">
-                <input type="checkbox" />
-                <span>Manter conectado</span>
-              </label>
-              <button type="button" className="link">
-                Esqueci minha senha
+              <span className="muted login-hint">
+                {modoRegistro
+                  ? 'Disponível apenas enquanto não houver usuários.'
+                  : 'Sessão protegida por token JWT.'}
+              </span>
+              <button type="button" className="link" onClick={alternarModo}>
+                {modoRegistro ? 'Já tenho conta' : 'Primeiro acesso'}
               </button>
             </div>
 
-            <button type="submit" className="btn-primary login-submit" disabled={!username.trim()}>
-              Acessar
+            <button
+              type="submit"
+              className="btn-primary login-submit"
+              disabled={
+                carregando ||
+                !email.trim() ||
+                !senha ||
+                (modoRegistro && !nome.trim())
+              }
+            >
+              {carregando
+                ? modoRegistro
+                  ? 'Criando administrador...'
+                  : 'Entrando...'
+                : modoRegistro
+                  ? 'Criar administrador'
+                  : 'Acessar'}
             </button>
           </form>
 

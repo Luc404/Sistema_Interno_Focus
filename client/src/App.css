@@ -2350,3 +2350,53 @@
     display: none;
   }
 }
+
+/* ============ ESTADOS GERAIS (LOGIN/CARREGAMENTO) ============ */
+
+/* Tela cheia exibida enquanto a sessão salva é validada. */
+.app-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-2);
+  background: var(--bg);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Indicador de carregamento reutilizável. */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--brand);
+  animation: girar 0.7s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mensagens de erro exibidas em formulários. */
+.form-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.12);
+  color: var(--red);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+/* Texto auxiliar da linha de ações do login. */
+.login-hint {
+  font-size: 12px;
+  max-width: 58%;
+  line-height: 1.35;
+}

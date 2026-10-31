@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ComponentType } from 'react'
+import type { Usuario } from '../api/types'
 import {
   IconBell,
   IconBook,
@@ -23,7 +24,8 @@ import ThemePicker from './ThemePicker'
 export type Section = 'home' | 'files' | 'calendar' | 'backlogs' | 'chatbots' | 'notebooks'
 
 interface ShellProps {
-  user: string
+  /** Usuário autenticado, usado no cabeçalho e no controle de permissões. */
+  usuario: Usuario
   onLogout: () => void
 }
 
@@ -45,10 +47,10 @@ const meta: Record<Section, { title: string; subtitle: string; placeholder: stri
   notebooks: { title: 'Notebooks', subtitle: 'Documentação interna', placeholder: 'Search notebooks' },
 }
 
-export default function Shell({ user, onLogout }: ShellProps) {
+export default function Shell({ usuario, onLogout }: ShellProps) {
   const [section, setSection] = useState<Section>('home')
 
-  const initial = user.charAt(0).toUpperCase()
+  const initial = usuario.nome_completo.charAt(0).toUpperCase()
 
   return (
     <div className="shell">
@@ -84,8 +86,8 @@ export default function Shell({ user, onLogout }: ShellProps) {
           <div className="sidebar-user">
             <span className="avatar">{initial}</span>
             <div className="sidebar-user-info">
-              <strong>{user}</strong>
-              <span>Administrador</span>
+              <strong>{usuario.nome_completo}</strong>
+              <span>{usuario.perfil === 'ADMIN' ? 'Administrador' : 'Membro'}</span>
             </div>
           </div>
           <button className="logout-btn" onClick={onLogout}>
@@ -118,7 +120,9 @@ export default function Shell({ user, onLogout }: ShellProps) {
         </header>
 
         <main className="content">
-          {section === 'home' && <Dashboard user={user} onNavigate={setSection} />}
+          {section === 'home' && (
+            <Dashboard usuario={usuario} onNavigate={setSection} />
+          )}
           {section === 'files' && <Librarium />}
           {section === 'calendar' && <CalendarView />}
           {section === 'backlogs' && <Backlogs />}

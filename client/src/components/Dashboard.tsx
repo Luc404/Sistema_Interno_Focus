@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import type { Usuario } from '../api/types'
 import {
   IconBot,
   IconCalendar,
@@ -13,7 +14,8 @@ import {
 import type { Section } from './Shell'
 
 interface DashboardProps {
-  user: string
+  /** Usuário autenticado, usado na saudação e no painel de equipe. */
+  usuario: Usuario
   onNavigate: (s: Section) => void
 }
 
@@ -44,8 +46,8 @@ const tasks = [
   { title: 'Atualizar pasta de contratos 2026', status: 'CONCLUÍDA' },
 ]
 
-export default function Dashboard({ user, onNavigate }: DashboardProps) {
-  const firstName = user.split(' ')[0]
+export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
+  const firstName = usuario.nome_completo.split(' ')[0]
 
   return (
     <div className="page home-page">
