@@ -331,6 +331,28 @@ export const api = {
       request<{ mensagem: string }>(`/links/${id}`, { method: 'DELETE' }),
   },
 
+  backlog: {
+    list: (params?: Record<string, string | number | boolean | null | undefined>) =>
+      request<Page<BacklogItem>>(`/backlog/${queryString(params)}`),
+    create: (dados: BacklogPayload) =>
+      request<BacklogItem>('/backlog/', {
+        method: 'POST',
+        body: JSON.stringify(dados),
+      }),
+    update: (id: number, dados: Partial<BacklogPayload>) =>
+      request<BacklogItem>(`/backlog/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dados),
+      }),
+    status: (id: number, status: BacklogItem['status']) =>
+      request<BacklogItem>(`/backlog/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+    remove: (id: number) =>
+      request<{ mensagem: string }>(`/backlog/${id}`, { method: 'DELETE' }),
+  },
+
   reunioes: {
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Reuniao>>(`/reunioes/${queryString(params)}`),
