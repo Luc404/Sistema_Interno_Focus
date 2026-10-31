@@ -1,24 +1,30 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+from typing import Literal, Optional
+
+from pydantic import BaseModel, Field
+
 from app.schemas.partial import PartialUpdate
 
+StatusSetor = Literal["ATIVO", "INATIVO"]
+
+
 class SetorCreate(BaseModel):
-    nome: str
-    descricao: Optional[str] = None
+    nome: str = Field(min_length=2, max_length=100)
+    descricao: Optional[str] = Field(default=None, max_length=255)
+
 
 class SetorResponse(BaseModel):
     id: int
     nome: str
     descricao: Optional[str] = None
-    status: Optional[str] = "ATIVO" #ATIVO OU INATIVO
+    status: StatusSetor
     data_criacao: datetime
 
     class Config:
         from_attributes = True
 
+
 class SetorUpdate(PartialUpdate):
-    nome: Optional[str] = None
-    descricao: Optional[str] = None
-    status: Optional[str] = "ATIVO"
-    
+    nome: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    descricao: Optional[str] = Field(default=None, max_length=255)
+    status: Optional[StatusSetor] = None

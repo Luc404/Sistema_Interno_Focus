@@ -1,22 +1,30 @@
-from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel, Field
+
 from app.schemas.partial import PartialUpdate
 
-class ArquivoBase(BaseModel):
-    titulo: str
-    categoria: str
 
-class ArquivoCreate(ArquivoBase):
-    tipo_mime: str
-    caminho_arquivo: str
-    tamanho_bytes: int
-    usuario_id: int
+class ArquivoCreate(BaseModel):
+    titulo: str = Field(min_length=1, max_length=100)
+    categoria: Optional[str] = Field(default=None, max_length=100)
+    categoria_id: Optional[int] = None
+    pasta_id: Optional[int] = None
+    tipo_mime: str = Field(max_length=100)
+    caminho_arquivo: str = Field(max_length=500)
+    tamanho_bytes: int = Field(ge=0)
+    usuario_id: Optional[int] = None
 
-class ArquivoResponse(ArquivoBase):
+
+class ArquivoResponse(BaseModel):
     id: int
+    titulo: str
     caminho_arquivo: str
     tipo_mime: str
+    categoria: Optional[str] = None
+    categoria_id: Optional[int] = None
+    pasta_id: Optional[int] = None
     tamanho_bytes: int
     data_upload: datetime
     usuario_id: int
@@ -24,10 +32,9 @@ class ArquivoResponse(ArquivoBase):
     class Config:
         from_attributes = True
 
+
 class ArquivoUpdate(PartialUpdate):
-    titulo: Optional[str] = None
-    categoria: Optional[str] = None
-    tipo_mime: Optional[str] = None
-    caminho_arquivo: Optional[str] = None
-    tamanho_bytes: Optional[int] = None
-    usuario_id: Optional[int] = None
+    titulo: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    categoria: Optional[str] = Field(default=None, max_length=100)
+    categoria_id: Optional[int] = None
+    pasta_id: Optional[int] = None

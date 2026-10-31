@@ -1,21 +1,38 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
 from datetime import datetime
+from typing import Literal, Optional
 
-class UsuarioCreate(BaseModel):
-    nome_completo: str
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.schemas.partial import PartialUpdate
+
+Perfil = Literal["ADMIN", "MEMBRO"]
+
+
+class UsuarioBase(BaseModel):
+    nome_completo: str = Field(min_length=2, max_length=150)
     email: EmailStr
-    senha: str
-    cargo: Optional[str] = None
-    perfil: Optional[str] = "MEMBRO"
+    cargo: Optional[str] = Field(default=None, max_length=100)
+    perfil: Perfil = "MEMBRO"
     setor_id: Optional[int] = None
+
+
+class UsuarioCreate(UsuarioBase):
+    senha: str = Field(min_length=8, max_length=128)
+
+    @field_validator("senha")
+    @classmethod
+    def senha_forte(cls, valor: str) -> str:
+        if not any(c.isdigit() for c in valor) or not any(c.isalpha() for c in valor):
+            raise ValueError("A senha deve conter letras e números")
+        return valor
+
 
 class UsuarioResponse(BaseModel):
     id: int
     nome_completo: str
     email: EmailStr
     cargo: Optional[str] = None
-    perfil: Optional[str] = "MEMBRO"
+    perfil: Perfil
     ativo: bool
     data_cadastro: datetime
     setor_id: Optional[int] = None
@@ -23,9 +40,26 @@ class UsuarioResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class UsuarioUpdate(BaseModel):
-    nome_completo: Optional[str] = None
+
+class UsuarioResumo(BaseModel):
+    id: int
+    nome_completo: str
+    email: EmailStr
+    perfil: Perfil
+
+    class Config:
+        from_attributes = True
+
+
+class UsuarioUpdate(PartialUpdate):
+    nome_completo: Optional[str] = Field(default=None, min_length=2, max_length=150)
     email: Optional[EmailStr] = None
-    cargo: Optional[str] = None
-    perfil: Optional[str] = "MEMBRO"
+    cargo: Optional[str] = Field(default=None, max_length=100)
+    perfil: Optional[Perfil] = None
     setor_id: Optional[int] = None
+    ativo: Optional[bool] = None
+
+
+class UsuarioSelfUpdate(PartialUpdate):
+    nome_completo: Optional[str] = Field(default=None, min_length=2, max_length=150)
+    cargo: Optional[str] = Field(default=None, max_length=100)

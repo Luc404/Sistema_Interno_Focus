@@ -2,8 +2,9 @@ from typing import ClassVar
 
 from pydantic import BaseModel, field_validator, model_validator
 
+
 class PartialUpdate(BaseModel):
-    campos_limpaveis: ClassVar[frozenset] = frozenset()
+    campos_limpaveis: ClassVar[frozenset[str]] = frozenset()
 
     @field_validator("*", mode="before")
     @classmethod
