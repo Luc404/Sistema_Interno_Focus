@@ -9,7 +9,7 @@ class Setor(Base):
     id = Column(Integer, primary_key = True, index = True)
     nome = Column(String(100), nullable = False, unique = True, index = True)
     descricao = Column(String(255), nullable = True)
-    ativo = Column(Boolean, default = True)
+    status = Column(String(50), default = "Ativo")
     data_criacao = Column(DateTime(timezone = True), default = lambda: datetime.now(timezone.utc))
 
     usuarios = relationship("Usuario", back_populates = "setor")

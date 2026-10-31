@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
+from app.schemas.partial import PartialUpdate
 
 class ArquivoBase(BaseModel):
     titulo: str
@@ -22,3 +23,11 @@ class ArquivoResponse(ArquivoBase):
 
     class Config:
         from_attributes = True
+
+class ArquivoUpdate(PartialUpdate):
+    titulo: Optional[str] = None
+    categoria: Optional[str] = None
+    tipo_mime: Optional[str] = None
+    caminho_arquivo: Optional[str] = None
+    tamanho_bytes: Optional[int] = None
+    usuario_id: Optional[int] = None

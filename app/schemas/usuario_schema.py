@@ -22,3 +22,10 @@ class UsuarioResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UsuarioUpdate(BaseModel):
+    nome_completo: Optional[str] = None
+    email: Optional[EmailStr] = None
+    cargo: Optional[str] = None
+    perfil: Optional[str] = "MEMBRO"
+    setor_id: Optional[int] = None
