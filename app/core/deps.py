@@ -10,6 +10,7 @@ from app.database import get_db
 from app.model.usuario import Usuario
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+oauth2_scheme_opcional = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
 
 CREDENCIAIS_INVALIDAS = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -33,6 +34,24 @@ def get_current_user(
         raise CREDENCIAIS_INVALIDAS
     if not usuario.ativo:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuário inativo")
+    return usuario
+
+
+def get_current_user_opcional(
+    token: str | None = Depends(oauth2_scheme_opcional),
+    db: Session = Depends(get_db),
+) -> Usuario | None:
+    if not token:
+        return None
+    try:
+        payload = decode_token(token, tipo_esperado="access")
+        usuario_id = int(payload["sub"])
+    except (jwt.PyJWTError, KeyError, TypeError, ValueError):
+        return None
+
+    usuario = db.get(Usuario, usuario_id)
+    if not usuario or not usuario.ativo:
+        return None
     return usuario
 
 
