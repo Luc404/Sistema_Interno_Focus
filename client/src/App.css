@@ -2421,3 +2421,179 @@
   font-size: 12.5px;
   text-align: center;
 }
+
+/* ============ BUSCA GLOBAL E NOTIFICAÇÕES ============ */
+
+.search-wrapper,
+.notifications-wrapper {
+  position: relative;
+}
+
+/* Dropdown de resultados da busca global. */
+.search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 380px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  padding: 8px;
+  z-index: 50;
+}
+
+/* Linha de resultado clicável. */
+.search-result {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  text-align: left;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+}
+
+.search-result:hover {
+  background: var(--surface-strong);
+}
+
+/* Etiqueta do tipo do resultado (arquivo, link, backlog...). */
+.search-result-type {
+  flex-shrink: 0;
+  align-self: flex-start;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 14%, transparent);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.search-result-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.search-result-body strong {
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result-body span {
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Estados de carregamento/vazio da busca e das notificações. */
+.search-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 10px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* Painel de notificações ancorado no sino. */
+.notifications-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 360px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  z-index: 50;
+  overflow: hidden;
+}
+
+.notifications-head,
+.notifications-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.notifications-foot {
+  border-bottom: none;
+  border-top: 1px solid var(--border-soft);
+}
+
+.notifications-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notifications-head strong {
+  font-size: 13px;
+}
+
+.notifications-head span {
+  font-size: 11.5px;
+}
+
+.notifications-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+/* Item de notificação: destaque sutil quando não lida. */
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.notification-item.unread {
+  background: color-mix(in srgb, var(--brand) 7%, transparent);
+}
+
+.notification-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--text);
+}
+
+.notification-body strong {
+  font-size: 12.5px;
+}
+
+.notification-body span {
+  font-size: 11.5px;
+  color: var(--text-2);
+  line-height: 1.35;
+}
+
+.notification-body em {
+  font-size: 10.5px;
+  font-style: normal;
+  color: var(--faint);
+}
