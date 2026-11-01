@@ -413,6 +413,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    update: (id: number, dados: Partial<ChatbotPayload>) =>
+      request<Chatbot>(`/chatbots/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dados),
+      }),
     remove: (id: number) =>
       request<{ mensagem: string }>(`/chatbots/${id}`, { method: 'DELETE' }),
     mensagens: (id: number, params?: Record<string, string | number | boolean | null | undefined>) =>

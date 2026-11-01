@@ -470,7 +470,7 @@ export default function Shell({ usuario, onLogout }: ShellProps) {
           {section === 'files' && <Librarium usuario={usuario} />}
           {section === 'calendar' && <CalendarView usuario={usuario} />}
           {section === 'backlogs' && <Backlogs usuario={usuario} />}
-          {section === 'chatbots' && <Chatbots />}
+          {section === 'chatbots' && <Chatbots usuario={usuario} />}
           {section === 'notebooks' && <Notebooks />}
         </main>
       </div>
