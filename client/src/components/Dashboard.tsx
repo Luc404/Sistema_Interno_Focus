@@ -28,12 +28,25 @@ interface DashboardProps {
 }
 
 /** Módulos exibidos no atalho inferior do painel. */
-const modules: { id: Section; label: string; desc: string; icon: ComponentType<{ size?: number }> }[] = [
+const modules: {
+  id: Section
+  label: string
+  desc: string
+  icon: ComponentType<{ size?: number }>
+  adminOnly?: boolean
+}[] = [
   { id: 'files', label: 'Arquivos', desc: 'Biblioteca de arquivos e links úteis', icon: IconFolder },
   { id: 'calendar', label: 'Agenda', desc: 'Reuniões, tarefas pessoais e mensalidades', icon: IconCalendar },
   { id: 'backlogs', label: 'Backlog', desc: 'Demandas, melhorias e correções do time', icon: IconLayers },
   { id: 'chatbots', label: 'Chatbots', desc: 'Assistentes de IA e automações ativas', icon: IconBot },
   { id: 'notebooks', label: 'Notebooks', desc: 'Documentação e boas práticas internas', icon: IconNotebook },
+  {
+    id: 'team',
+    label: 'Equipe',
+    desc: 'Usuários, setores e permissões de acesso',
+    icon: IconUsers,
+    adminOnly: true,
+  },
 ]
 
 /** Converte um status técnico em texto amigável para a interface. */
@@ -170,7 +183,7 @@ export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
       <div className="home-hero">
         <div>
           <span className="eyebrow">Sistema Interno</span>
-          <h2>Olá, {primeiroNome}. 👋</h2>
+          <h2>Olá, {primeiroNome}.</h2>
           <p>Veja o que está acontecendo hoje na Focus Solutions.</p>
         </div>
         <div className="home-hero-badge">
@@ -254,8 +267,14 @@ export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
         <section className="panel">
           <div className="panel-head">
             <h3>Equipe</h3>
-            <button className="link" onClick={() => onNavigate('calendar')}>
-              Gerenciar <IconChevronRight size={15} />
+            <button
+              className="link"
+              onClick={() =>
+                onNavigate(usuario.perfil === 'ADMIN' ? 'team' : 'calendar')
+              }
+            >
+              {usuario.perfil === 'ADMIN' ? 'Gerenciar' : 'Ver agenda'}{' '}
+              <IconChevronRight size={15} />
             </button>
           </div>
           <div className="team">
@@ -296,7 +315,9 @@ export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
           <span className="muted">Acesse rapidamente</span>
         </div>
         <div className="modules-grid">
-          {modules.map((modulo) => {
+          {modules
+            .filter((modulo) => !modulo.adminOnly || usuario.perfil === 'ADMIN')
+            .map((modulo) => {
             const Icone = modulo.icon
             return (
               <button

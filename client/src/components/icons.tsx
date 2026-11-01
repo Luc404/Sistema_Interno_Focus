@@ -250,6 +250,13 @@ export const IconTrash = (p: IconProps) => (
   </S>
 )
 
+export const IconEdit = (p: IconProps) => (
+  <S {...p}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </S>
+)
+
 export const IconPalette = (p: IconProps) => (
   <S {...p}>
     <path d="M12 2a10 10 0 1 0 0 20c1.4 0 2-.9 2-1.9 0-.6-.3-1.1-.6-1.5-.3-.4-.6-.9-.6-1.5 0-1.2 1-2.1 2.3-2.1h1.9C20.6 15 22 13.5 22 11.6 22 6.3 17.5 2 12 2Z" />

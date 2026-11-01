@@ -2841,6 +2841,25 @@
   box-shadow: 0 0 0 1px var(--on-accent);
 }
 
+/* ============ EQUIPE (USUÁRIOS E SETORES) ============ */
+
+.team-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* Linha secundária dentro de uma célula da tabela. */
+.cell-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
 /* ============ BACKLOG ============ */
 
 .backlog-actions {

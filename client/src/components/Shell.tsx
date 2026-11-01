@@ -16,6 +16,7 @@ import {
   IconRefresh,
   IconSearch,
   IconTrash,
+  IconUsers,
   IconX,
 } from './icons'
 import Dashboard from './Dashboard'
@@ -24,9 +25,17 @@ import CalendarView from './CalendarView'
 import Backlogs from './Backlogs'
 import Chatbots from './Chatbots'
 import Notebooks from './Notebooks'
+import Team from './Team'
 import ThemePicker from './ThemePicker'
 
-export type Section = 'home' | 'files' | 'calendar' | 'backlogs' | 'chatbots' | 'notebooks'
+export type Section =
+  | 'home'
+  | 'files'
+  | 'calendar'
+  | 'backlogs'
+  | 'chatbots'
+  | 'notebooks'
+  | 'team'
 
 interface ShellProps {
   /** Usuário autenticado, usado no cabeçalho e no controle de permissões. */
@@ -35,13 +44,19 @@ interface ShellProps {
 }
 
 /** Itens fixos da navegação lateral. */
-const nav: { id: Section; label: string; icon: ComponentType<{ size?: number }> }[] = [
+const nav: {
+  id: Section
+  label: string
+  icon: ComponentType<{ size?: number }>
+  adminOnly?: boolean
+}[] = [
   { id: 'home', label: 'Início', icon: IconGrid },
   { id: 'files', label: 'Arquivos', icon: IconFolder },
   { id: 'calendar', label: 'Agenda', icon: IconCalendar },
   { id: 'backlogs', label: 'Backlog', icon: IconLayers },
   { id: 'chatbots', label: 'Chatbots', icon: IconBot },
   { id: 'notebooks', label: 'Notebooks', icon: IconNotebook },
+  { id: 'team', label: 'Equipe', icon: IconUsers, adminOnly: true },
 ]
 
 /** Título, subtítulo e placeholder de busca de cada seção. */
@@ -75,6 +90,11 @@ const meta: Record<Section, { title: string; subtitle: string; placeholder: stri
     title: 'Notebooks',
     subtitle: 'Documentação interna',
     placeholder: 'Pesquisar notebooks',
+  },
+  team: {
+    title: 'Equipe',
+    subtitle: 'Usuários, setores e permissões',
+    placeholder: 'Pesquisar usuários e setores',
   },
 }
 
@@ -291,7 +311,9 @@ export default function Shell({ usuario, onLogout }: ShellProps) {
 
         <nav className="sidebar-nav">
           <span className="sidebar-label">Módulos</span>
-          {nav.map((item) => {
+          {nav
+            .filter((item) => !item.adminOnly || usuario.perfil === 'ADMIN')
+            .map((item) => {
             const Icone = item.icon
             return (
               <button
@@ -472,6 +494,7 @@ export default function Shell({ usuario, onLogout }: ShellProps) {
           {section === 'backlogs' && <Backlogs usuario={usuario} />}
           {section === 'chatbots' && <Chatbots usuario={usuario} />}
           {section === 'notebooks' && <Notebooks usuario={usuario} />}
+          {section === 'team' && <Team usuario={usuario} />}
         </main>
       </div>
     </div>

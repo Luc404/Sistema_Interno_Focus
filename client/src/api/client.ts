@@ -38,6 +38,7 @@ import type {
   TokenResponse,
   Usuario,
   UsuarioCreatePayload,
+  UsuarioUpdatePayload,
 } from './types'
 
 /** URL da API. Pode ser trocada por variável de ambiente no build. */
@@ -255,6 +256,17 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    update: (id: number, dados: UsuarioUpdatePayload) =>
+      request<Usuario>(`/usuarios/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dados),
+      }),
+    ativar: (id: number) =>
+      request<Usuario>(`/usuarios/${id}/ativar`, { method: 'POST' }),
+    desativar: (id: number) =>
+      request<Usuario>(`/usuarios/${id}/desativar`, { method: 'POST' }),
+    remove: (id: number) =>
+      request<{ mensagem: string }>(`/usuarios/${id}`, { method: 'DELETE' }),
   },
 
   setores: {
@@ -265,6 +277,13 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    update: (id: number, dados: Partial<SetorPayload>) =>
+      request<Setor>(`/setores/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(dados),
+      }),
+    remove: (id: number) =>
+      request<{ mensagem: string }>(`/setores/${id}`, { method: 'DELETE' }),
   },
 
   dashboard: {

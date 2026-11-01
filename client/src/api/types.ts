@@ -57,6 +57,20 @@ export interface UsuarioCreatePayload {
   setor_id?: number | null
 }
 
+export interface UsuarioUpdatePayload {
+  nome_completo?: string
+  email?: string
+  cargo?: string | null
+  perfil?: Perfil
+  setor_id?: number | null
+  ativo?: boolean
+}
+
+export interface UsuarioSelfUpdatePayload {
+  nome_completo?: string
+  cargo?: string | null
+}
+
 export interface Setor {
   id: number
   nome: string
