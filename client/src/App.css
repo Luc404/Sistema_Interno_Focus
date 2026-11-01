@@ -2809,9 +2809,41 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent);
 }
 
+/* Dia selecionado no calendário, sem conflitar com o destaque de hoje. */
+.day.selected:not(.today) {
+  border-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+}
+
+.day.empty {
+  cursor: default;
+  background: transparent;
+}
+
+.day-dots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.day-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.day.today .day-dots i {
+  box-shadow: 0 0 0 1px var(--on-accent);
+}
+
 @media (max-width: 720px) {
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .calendar-nav {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .librarium-top,
