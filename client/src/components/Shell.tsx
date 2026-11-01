@@ -170,6 +170,14 @@ export default function Shell({
   const [salvandoPerfil, setSalvandoPerfil] = useState(false)
   const [erroPerfil, setErroPerfil] = useState<string | null>(null)
 
+  // Alteração de senha dentro do modal de perfil
+  const [senhaAtual, setSenhaAtual] = useState('')
+  const [novaSenha, setNovaSenha] = useState('')
+  const [confirmarSenha, setConfirmarSenha] = useState('')
+  const [alterandoSenha, setAlterandoSenha] = useState(false)
+  const [erroSenha, setErroSenha] = useState<string | null>(null)
+  const [sucessoSenha, setSucessoSenha] = useState<string | null>(null)
+
   const buscaRef = useRef<HTMLDivElement>(null)
   const notificacoesRef = useRef<HTMLDivElement>(null)
 
@@ -180,6 +188,11 @@ export default function Shell({
     setPerfilNome(usuario.nome_completo)
     setPerfilCargo(usuario.cargo ?? '')
     setErroPerfil(null)
+    setSenhaAtual('')
+    setNovaSenha('')
+    setConfirmarSenha('')
+    setErroSenha(null)
+    setSucessoSenha(null)
     setPerfilAberto(true)
   }
 
@@ -211,6 +224,45 @@ export default function Shell({
       setSalvandoPerfil(false)
     }
   }
+
+  /** Altera a senha do usuário autenticado. */
+  async function alterarSenha(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    setErroSenha(null)
+    setSucessoSenha(null)
+
+    if (!senhaAtual) {
+      setErroSenha('Informe a senha atual.')
+      return
+    }
+
+    if (novaSenha.length < 8 || !/[a-zA-Z]/.test(novaSenha) || !/\d/.test(novaSenha)) {
+      setErroSenha('A nova senha deve ter ao menos 8 caracteres, com letras e números.')
+      return
+    }
+
+    if (novaSenha !== confirmarSenha) {
+      setErroSenha('A confirmação não corresponde à nova senha.')
+      return
+    }
+
+    setAlterandoSenha(true)
+
+    try {
+      await api.auth.alterarSenha(senhaAtual, novaSenha)
+      setSenhaAtual('')
+      setNovaSenha('')
+      setConfirmarSenha('')
+      setSucessoSenha('Senha alterada com sucesso.')
+    } catch (falha) {
+      setErroSenha(
+        falha instanceof Error ? falha.message : 'Não foi possível alterar a senha.',
+      )
+    } finally {
+      setAlterandoSenha(false)
+    }
+  }
+
   const naoLidas = notificacoes.filter((item) => !item.lida).length
 
   // Fecha os popovers ao clicar fora ou pressionar Escape.
@@ -577,6 +629,7 @@ export default function Shell({
                 value={perfilNome}
                 onChange={(evento) => setPerfilNome(evento.target.value)}
                 placeholder="Seu nome"
+                maxLength={150}
               />
             </label>
 
@@ -587,6 +640,7 @@ export default function Shell({
                 value={perfilCargo}
                 onChange={(evento) => setPerfilCargo(evento.target.value)}
                 placeholder="Opcional"
+                maxLength={100}
               />
             </label>
 
@@ -616,6 +670,58 @@ export default function Shell({
               </button>
               <button type="submit" className="btn-primary" disabled={salvandoPerfil}>
                 {salvandoPerfil ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </form>
+
+          <div className="form-divider">
+            <span>Alterar senha</span>
+          </div>
+
+          <form className="form-grid" onSubmit={alterarSenha}>
+            <label className="field">
+              <span>Senha atual</span>
+              <input
+                type="password"
+                value={senhaAtual}
+                onChange={(evento) => setSenhaAtual(evento.target.value)}
+                placeholder="Sua senha atual"
+              />
+            </label>
+
+            <div className="form-row">
+              <label className="field">
+                <span>Nova senha</span>
+                <input
+                  type="password"
+                  value={novaSenha}
+                  onChange={(evento) => setNovaSenha(evento.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                  maxLength={128}
+                />
+              </label>
+
+              <label className="field">
+                <span>Confirmar nova senha</span>
+                <input
+                  type="password"
+                  value={confirmarSenha}
+                  onChange={(evento) => setConfirmarSenha(evento.target.value)}
+                  placeholder="Repita a nova senha"
+                />
+              </label>
+            </div>
+
+            {erroSenha && <div className="form-error">{erroSenha}</div>}
+            {sucessoSenha && <div className="form-success">{sucessoSenha}</div>}
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={alterandoSenha}
+              >
+                {alterandoSenha ? 'Alterando...' : 'Alterar senha'}
               </button>
             </div>
           </form>

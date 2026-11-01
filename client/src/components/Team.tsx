@@ -245,8 +245,8 @@ export default function Team({ usuario }: TeamProps) {
     evento.preventDefault()
     const nomeLimpo = nomeSetor.trim()
 
-    if (!nomeLimpo) {
-      setErroSetor('Informe o nome do setor.')
+    if (nomeLimpo.length < 2) {
+      setErroSetor('O nome do setor deve ter ao menos 2 caracteres.')
       return
     }
 
@@ -263,7 +263,8 @@ export default function Team({ usuario }: TeamProps) {
       if (editandoSetor) {
         await api.setores.update(editandoSetor.id, payload)
       } else {
-        await api.setores.create(payload)
+        // O endpoint de criação não recebe status; o setor nasce ativo.
+        await api.setores.create({ nome: nomeLimpo, descricao: payload.descricao })
       }
 
       setModalSetor(false)
@@ -513,6 +514,7 @@ export default function Team({ usuario }: TeamProps) {
                 value={nome}
                 onChange={(evento) => setNome(evento.target.value)}
                 placeholder="Nome do colaborador"
+                maxLength={150}
               />
             </label>
 
@@ -534,6 +536,7 @@ export default function Team({ usuario }: TeamProps) {
                   value={senha}
                   onChange={(evento) => setSenha(evento.target.value)}
                   placeholder="Mínimo 8 caracteres, com letras e números"
+                  maxLength={128}
                 />
               </label>
             )}
@@ -546,6 +549,7 @@ export default function Team({ usuario }: TeamProps) {
                   value={cargo}
                   onChange={(evento) => setCargo(evento.target.value)}
                   placeholder="Opcional"
+                  maxLength={100}
                 />
               </label>
 
@@ -577,7 +581,7 @@ export default function Team({ usuario }: TeamProps) {
                 </select>
               </label>
 
-              {editandoUsuario && (
+              {editandoUsuario && editandoUsuario.id !== usuario.id && (
                 <label className="field">
                   <span>Status</span>
                   <select
@@ -626,6 +630,7 @@ export default function Team({ usuario }: TeamProps) {
                 value={nomeSetor}
                 onChange={(evento) => setNomeSetor(evento.target.value)}
                 placeholder="Ex.: Desenvolvimento"
+                maxLength={100}
               />
             </label>
 
@@ -636,21 +641,24 @@ export default function Team({ usuario }: TeamProps) {
                 value={descricaoSetor}
                 onChange={(evento) => setDescricaoSetor(evento.target.value)}
                 placeholder="Opcional"
+                maxLength={255}
               />
             </label>
 
-            <label className="field">
-              <span>Status</span>
-              <select
-                value={statusSetor}
-                onChange={(evento) =>
-                  setStatusSetor(evento.target.value as 'ATIVO' | 'INATIVO')
-                }
-              >
-                <option value="ATIVO">Ativo</option>
-                <option value="INATIVO">Inativo</option>
-              </select>
-            </label>
+            {editandoSetor && (
+              <label className="field">
+                <span>Status</span>
+                <select
+                  value={statusSetor}
+                  onChange={(evento) =>
+                    setStatusSetor(evento.target.value as 'ATIVO' | 'INATIVO')
+                  }
+                >
+                  <option value="ATIVO">Ativo</option>
+                  <option value="INATIVO">Inativo</option>
+                </select>
+              </label>
+            )}
 
             {erroSetor && <div className="form-error">{erroSetor}</div>}
 
