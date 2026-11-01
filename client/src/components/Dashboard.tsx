@@ -1,5 +1,12 @@
+import { useEffect, useState } from 'react'
 import type { ComponentType } from 'react'
-import type { Usuario } from '../api/types'
+import { api, ApiError } from '../api/client'
+import type {
+  DashboardResumo,
+  Setor,
+  TarefaPessoal,
+  Usuario,
+} from '../api/types'
 import {
   IconBot,
   IconCalendar,
@@ -9,6 +16,7 @@ import {
   IconFolder,
   IconLayers,
   IconNotebook,
+  IconRefresh,
   IconUsers,
 } from './icons'
 import type { Section } from './Shell'
@@ -19,13 +27,7 @@ interface DashboardProps {
   onNavigate: (s: Section) => void
 }
 
-const stats = [
-  { icon: IconCalendar, label: 'Reuniões hoje', value: '4', tone: 'violet' },
-  { icon: IconChart, label: 'Mensalidades pendentes', value: '7', tone: 'amber' },
-  { icon: IconFile, label: 'Arquivos na biblioteca', value: '182', tone: 'blue' },
-  { icon: IconLayers, label: 'Itens no backlog', value: '36', tone: 'green' },
-]
-
+/** Módulos exibidos no atalho inferior do painel. */
 const modules: { id: Section; label: string; desc: string; icon: ComponentType<{ size?: number }> }[] = [
   { id: 'files', label: 'Arquivos', desc: 'Biblioteca de arquivos e links úteis', icon: IconFolder },
   { id: 'calendar', label: 'Agenda', desc: 'Reuniões, tarefas pessoais e mensalidades', icon: IconCalendar },
@@ -34,27 +36,141 @@ const modules: { id: Section; label: string; desc: string; icon: ComponentType<{
   { id: 'notebooks', label: 'Notebooks', desc: 'Documentação e boas práticas internas', icon: IconNotebook },
 ]
 
-const meetings = [
-  { time: '09:30', title: 'Daily — Equipe de desenvolvimento', who: 'Backend · 6 participantes', tag: 'Reunião' },
-  { time: '11:00', title: 'Review de mensalidades — Clientes', who: 'Financeiro · 3 participantes', tag: 'Reunião' },
-  { time: '14:30', title: 'Planejamento do backlog da sprint', who: 'Produto · 8 participantes', tag: 'Reunião' },
-]
+/** Converte um status técnico em texto amigável para a interface. */
+function labelStatusTarefa(status: TarefaPessoal['status']): string {
+  if (status === 'EM_ANDAMENTO') return 'EM ANDAMENTO'
+  if (status === 'CONCLUIDA') return 'CONCLUÍDA'
+  return 'PENDENTE'
+}
 
-const tasks = [
-  { title: 'Revisar migração de banco de dados', status: 'EM ANDAMENTO' },
-  { title: 'Subir relatório de vendas de agosto', status: 'PENDENTE' },
-  { title: 'Atualizar pasta de contratos 2026', status: 'CONCLUÍDA' },
-]
+/** Retorna a classe visual do pill conforme o status da tarefa. */
+function pillTarefa(status: TarefaPessoal['status']): string {
+  if (status === 'EM_ANDAMENTO') return 'pill-blue'
+  if (status === 'CONCLUIDA') return 'pill-green'
+  return 'pill-amber'
+}
+
+/** Formata apenas o horário de uma data ISO. */
+function hora(iso: string): string {
+  return new Date(iso).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+/** Formata dia e mês abreviado de uma data ISO. */
+function diaMes(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+  })
+}
 
 export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
-  const firstName = usuario.nome_completo.split(' ')[0]
+  const [resumo, setResumo] = useState<DashboardResumo | null>(null)
+  const [tarefas, setTarefas] = useState<TarefaPessoal[]>([])
+  const [setores, setSetores] = useState<Setor[]>([])
+  const [erro, setErro] = useState<string | null>(null)
+  const [carregando, setCarregando] = useState(true)
+
+  // Carrega em paralelo os indicadores, as tarefas do usuário e os setores.
+  useEffect(() => {
+    let ativo = true
+
+    async function carregar() {
+      setCarregando(true)
+      setErro(null)
+
+      try {
+        const [dadosResumo, paginaTarefas, paginaSetores] = await Promise.all([
+          api.dashboard.resumo(),
+          api.tarefas.minhas({ limit: 5 }),
+          api.setores.list({ limit: 6, status: 'ATIVO' }),
+        ])
+
+        if (!ativo) return
+        setResumo(dadosResumo)
+        setTarefas(paginaTarefas.items)
+        setSetores(paginaSetores.items)
+      } catch (error) {
+        if (!ativo) return
+        setErro(
+          error instanceof ApiError
+            ? error.message
+            : 'Não foi possível carregar o painel.',
+        )
+      } finally {
+        if (ativo) setCarregando(false)
+      }
+    }
+
+    void carregar()
+    return () => {
+      ativo = false
+    }
+  }, [])
+
+  const primeiroNome = usuario.nome_completo.split(' ')[0]
+
+  const stats = [
+    {
+      icon: IconCalendar,
+      label: 'Reuniões hoje',
+      value: resumo?.reunioes_hoje ?? 0,
+      tone: 'violet',
+    },
+    {
+      icon: IconChart,
+      label: 'Mensalidades pendentes',
+      value: resumo?.mensalidades_pendentes ?? 0,
+      tone: 'amber',
+    },
+    {
+      icon: IconFile,
+      label: 'Arquivos na biblioteca',
+      value: resumo?.arquivos ?? 0,
+      tone: 'blue',
+    },
+    {
+      icon: IconLayers,
+      label: 'Itens no backlog',
+      value: resumo?.itens_backlog ?? 0,
+      tone: 'green',
+    },
+  ]
+
+  if (carregando) {
+    return (
+      <div className="page home-page">
+        <div className="empty-state">
+          <span className="spinner" />
+          Carregando painel...
+        </div>
+      </div>
+    )
+  }
+
+  if (erro) {
+    return (
+      <div className="page home-page">
+        <div className="empty-state">
+          <p className="form-error" role="alert">
+            {erro}
+          </p>
+          <button className="btn-ghost" onClick={() => window.location.reload()}>
+            <IconRefresh size={16} /> Tentar novamente
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="page home-page">
       <div className="home-hero">
         <div>
           <span className="eyebrow">Sistema Interno</span>
-          <h2>Olá, {firstName}. 👋</h2>
+          <h2>Olá, {primeiroNome}. 👋</h2>
           <p>Veja o que está acontecendo hoje na Focus Solutions.</p>
         </div>
         <div className="home-hero-badge">
@@ -64,16 +180,16 @@ export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
       </div>
 
       <section className="stats-grid">
-        {stats.map((s) => {
-          const Icon = s.icon
+        {stats.map((stat) => {
+          const Icone = stat.icon
           return (
-            <div className="stat-card" key={s.label}>
-              <div className={`stat-icon tone-${s.tone}`}>
-                <Icon size={20} />
+            <div className="stat-card" key={stat.label}>
+              <div className={`stat-icon tone-${stat.tone}`}>
+                <Icone size={20} />
               </div>
               <div>
-                <span>{s.label}</span>
-                <strong>{s.value}</strong>
+                <span>{stat.label}</span>
+                <strong>{stat.value}</strong>
               </div>
             </div>
           )
@@ -89,14 +205,17 @@ export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
             </button>
           </div>
           <div className="list">
-            {meetings.map((m) => (
-              <div className="list-row" key={m.title}>
-                <div className="time-chip">{m.time}</div>
+            {resumo?.proximas_reunioes.length === 0 && (
+              <div className="empty-inline">Nenhuma reunião agendada.</div>
+            )}
+            {resumo?.proximas_reunioes.map((reuniao) => (
+              <div className="list-row" key={reuniao.id}>
+                <div className="time-chip">{hora(reuniao.data_hora_inicio)}</div>
                 <div className="list-row-body">
-                  <strong>{m.title}</strong>
-                  <span>{m.who}</span>
+                  <strong>{reuniao.titulo}</strong>
+                  <span>{diaMes(reuniao.data_hora_inicio)} · Reunião</span>
                 </div>
-                <span className="chip">{m.tag}</span>
+                <span className="chip">Reunião</span>
               </div>
             ))}
           </div>
@@ -110,14 +229,22 @@ export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
             </button>
           </div>
           <div className="list">
-            {tasks.map((t) => (
-              <div className="list-row" key={t.title}>
-                <span className="checkbox" aria-hidden="true" />
+            {tarefas.length === 0 && (
+              <div className="empty-inline">Nenhuma tarefa cadastrada.</div>
+            )}
+            {tarefas.map((tarefa) => (
+              <div className="list-row" key={tarefa.id}>
+                <span
+                  className={`checkbox${tarefa.status === 'CONCLUIDA' ? ' checked' : ''}`}
+                  aria-hidden="true"
+                />
                 <div className="list-row-body">
-                  <strong>{t.title}</strong>
+                  <strong className={tarefa.status === 'CONCLUIDA' ? 'strike' : ''}>
+                    {tarefa.titulo}
+                  </strong>
                 </div>
-                <span className={`pill pill-${t.status === 'EM ANDAMENTO' ? 'blue' : t.status === 'CONCLUÍDA' ? 'green' : 'amber'}`}>
-                  {t.status}
+                <span className={`pill ${pillTarefa(tarefa.status)}`}>
+                  {labelStatusTarefa(tarefa.status)}
                 </span>
               </div>
             ))}
@@ -127,29 +254,36 @@ export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
         <section className="panel">
           <div className="panel-head">
             <h3>Equipe</h3>
-            <button className="link">
+            <button className="link" onClick={() => onNavigate('calendar')}>
               Gerenciar <IconChevronRight size={15} />
             </button>
           </div>
           <div className="team">
             <div className="team-avatars">
-              <span className="avatar">M</span>
-              <span className="avatar">R</span>
-              <span className="avatar">A</span>
-              <span className="avatar">P</span>
-              <span className="avatar avatar-more">+3</span>
+              {setores.slice(0, 4).map((setor) => (
+                <span className="avatar" key={setor.id}>
+                  {setor.nome.charAt(0).toUpperCase()}
+                </span>
+              ))}
+              {setores.length > 4 && (
+                <span className="avatar avatar-more">+{setores.length - 4}</span>
+              )}
             </div>
             <div className="team-meta">
-              <strong>12 colaboradores ativos</strong>
+              <strong>{resumo?.usuarios_ativos ?? 0} colaboradores ativos</strong>
               <span>
-                <IconUsers size={15} /> Distribuídos em 4 setores
+                <IconUsers size={15} /> Distribuídos em {resumo?.setores_ativos ?? 0} setores
               </span>
             </div>
           </div>
           <div className="team-setores">
-            {['Desenvolvimento', 'Financeiro', 'Atendimento', 'Comercial'].map((s, i) => (
-              <span className="chip" key={s}>
-                <i className={`dot-${['violet', 'blue', 'green', 'amber'][i]}`} /> {s}
+            {setores.length === 0 && (
+              <span className="muted">Nenhum setor ativo cadastrado.</span>
+            )}
+            {setores.map((setor, indice) => (
+              <span className="chip" key={setor.id}>
+                <i className={`dot-${['violet', 'blue', 'green', 'amber'][indice % 4]}`} />{' '}
+                {setor.nome}
               </span>
             ))}
           </div>
@@ -162,15 +296,19 @@ export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
           <span className="muted">Acesse rapidamente</span>
         </div>
         <div className="modules-grid">
-          {modules.map((m) => {
-            const Icon = m.icon
+          {modules.map((modulo) => {
+            const Icone = modulo.icon
             return (
-              <button className="module-card" key={m.id} onClick={() => onNavigate(m.id)}>
+              <button
+                className="module-card"
+                key={modulo.id}
+                onClick={() => onNavigate(modulo.id)}
+              >
                 <span className="module-icon">
-                  <Icon size={22} />
+                  <Icone size={22} />
                 </span>
-                <strong>{m.label}</strong>
-                <span>{m.desc}</span>
+                <strong>{modulo.label}</strong>
+                <span>{modulo.desc}</span>
                 <IconChevronRight className="module-arrow" size={18} />
               </button>
             )

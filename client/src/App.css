@@ -2400,3 +2400,24 @@
   max-width: 58%;
   line-height: 1.35;
 }
+
+/* Estado vazio/erro usado dentro das páginas. */
+.empty-state {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 13.5px;
+  text-align: center;
+}
+
+/* Mensagem curta para listas sem registros. */
+.empty-inline {
+  padding: 18px 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: center;
+}
