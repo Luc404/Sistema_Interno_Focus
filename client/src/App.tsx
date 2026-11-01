@@ -63,6 +63,7 @@ function App() {
   return (
     <Shell
       usuario={usuario}
+      onUsuarioAtualizado={setUsuario}
       onLogout={() => {
         clearTokens()
         setUsuario(null)

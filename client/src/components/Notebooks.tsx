@@ -123,16 +123,9 @@ export default function Notebooks({ usuario }: NotebooksProps) {
     return combinaGrupo && combinaBusca
   })
 
+  // Se o filtro esconder o notebook escolhido, exibe o primeiro visível.
   const selecionado =
-    notebooks.find((notebook) => notebook.id === selecionadoId) ?? null
-
-  // Se o filtro esconder o notebook selecionado, seleciona o primeiro visível.
-  useEffect(() => {
-    if (visiveis.length === 0) return
-    if (!visiveis.some((notebook) => notebook.id === selecionadoId)) {
-      setSelecionadoId(visiveis[0].id)
-    }
-  }, [grupoFiltro, busca, notebooks, selecionadoId, visiveis])
+    visiveis.find((notebook) => notebook.id === selecionadoId) ?? visiveis[0] ?? null
 
   /** Verifica se o usuário pode editar/excluir o notebook. */
   function podeGerenciar(notebook: Notebook): boolean {
@@ -273,7 +266,7 @@ export default function Notebooks({ usuario }: NotebooksProps) {
           {!carregando &&
             visiveis.map((notebook) => (
               <button
-                className={`nb-row${notebook.id === selecionadoId ? ' active' : ''}`}
+                className={`nb-row${notebook.id === selecionado?.id ? ' active' : ''}`}
                 key={notebook.id}
                 onClick={() => setSelecionadoId(notebook.id)}
               >

@@ -101,6 +101,24 @@
   box-shadow: 0 4px 14px color-mix(in srgb, var(--brand-deep) 40%, transparent);
 }
 
+.avatar-btn {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition: filter 0.15s, transform 0.15s;
+}
+
+.avatar-btn:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+.modal-card .field input:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
 .icon-btn {
   width: 36px;
   height: 36px;

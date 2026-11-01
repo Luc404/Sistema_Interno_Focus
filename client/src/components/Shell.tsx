@@ -24,6 +24,7 @@ import Librarium from './Librarium'
 import CalendarView from './CalendarView'
 import Backlogs from './Backlogs'
 import Chatbots from './Chatbots'
+import Modal from './Modal'
 import Notebooks from './Notebooks'
 import Team from './Team'
 import ThemePicker from './ThemePicker'
@@ -40,6 +41,8 @@ export type Section =
 interface ShellProps {
   /** Usuário autenticado, usado no cabeçalho e no controle de permissões. */
   usuario: Usuario
+  /** Atualiza o usuário na raiz após editar o próprio perfil. */
+  onUsuarioAtualizado: (usuario: Usuario) => void
   onLogout: () => void
 }
 
@@ -112,6 +115,8 @@ function secaoDoResultado(tipo: string): Section | null {
       return 'calendar'
     case 'notebook':
       return 'notebooks'
+    case 'usuario':
+      return 'team'
     default:
       return null
   }
@@ -125,6 +130,7 @@ function secaoDoLink(link: string | null): Section | null {
   if (link.includes('arquivo') || link.includes('biblioteca')) return 'files'
   if (link.includes('notebook')) return 'notebooks'
   if (link.includes('chat')) return 'chatbots'
+  if (link.includes('equipe') || link.includes('usuario')) return 'team'
   return null
 }
 
@@ -138,7 +144,11 @@ function dataCurta(iso: string): string {
   })
 }
 
-export default function Shell({ usuario, onLogout }: ShellProps) {
+export default function Shell({
+  usuario,
+  onUsuarioAtualizado,
+  onLogout,
+}: ShellProps) {
   const [section, setSection] = useState<Section>('home')
 
   // Busca global
@@ -153,10 +163,54 @@ export default function Shell({ usuario, onLogout }: ShellProps) {
   const [notificacoesAbertas, setNotificacoesAbertas] = useState(false)
   const [carregandoNotificacoes, setCarregandoNotificacoes] = useState(false)
 
+  // Edição do próprio perfil
+  const [perfilAberto, setPerfilAberto] = useState(false)
+  const [perfilNome, setPerfilNome] = useState('')
+  const [perfilCargo, setPerfilCargo] = useState('')
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false)
+  const [erroPerfil, setErroPerfil] = useState<string | null>(null)
+
   const buscaRef = useRef<HTMLDivElement>(null)
   const notificacoesRef = useRef<HTMLDivElement>(null)
 
   const inicial = usuario.nome_completo.charAt(0).toUpperCase()
+
+  /** Abre o modal de perfil com os dados atuais. */
+  function abrirPerfil() {
+    setPerfilNome(usuario.nome_completo)
+    setPerfilCargo(usuario.cargo ?? '')
+    setErroPerfil(null)
+    setPerfilAberto(true)
+  }
+
+  /** Salva nome e cargo do próprio usuário. */
+  async function salvarPerfil(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    const nomeLimpo = perfilNome.trim()
+
+    if (nomeLimpo.length < 2) {
+      setErroPerfil('Informe seu nome completo.')
+      return
+    }
+
+    setSalvandoPerfil(true)
+    setErroPerfil(null)
+
+    try {
+      const atualizado = await api.usuarios.updateMe({
+        nome_completo: nomeLimpo,
+        cargo: perfilCargo.trim() || null,
+      })
+      onUsuarioAtualizado(atualizado)
+      setPerfilAberto(false)
+    } catch (falha) {
+      setErroPerfil(
+        falha instanceof Error ? falha.message : 'Não foi possível salvar o perfil.',
+      )
+    } finally {
+      setSalvandoPerfil(false)
+    }
+  }
   const naoLidas = notificacoes.filter((item) => !item.lida).length
 
   // Fecha os popovers ao clicar fora ou pressionar Escape.
@@ -209,12 +263,7 @@ export default function Shell({ usuario, onLogout }: ShellProps) {
   // Busca com debounce para não disparar uma requisição a cada tecla.
   useEffect(() => {
     const limpo = termo.trim()
-    if (!limpo) {
-      setResultados([])
-      setBuscaAberta(false)
-      setErroBusca(null)
-      return
-    }
+    if (!limpo) return
 
     let cancelado = false
     const timer = window.setTimeout(async () => {
@@ -330,7 +379,13 @@ export default function Shell({ usuario, onLogout }: ShellProps) {
 
         <div className="sidebar-foot">
           <div className="sidebar-user">
-            <span className="avatar">{inicial}</span>
+            <button
+              className="avatar avatar-btn"
+              title="Editar meu perfil"
+              onClick={abrirPerfil}
+            >
+              {inicial}
+            </button>
             <div className="sidebar-user-info">
               <strong>{usuario.nome_completo}</strong>
               <span>{usuario.perfil === 'ADMIN' ? 'Administrador' : 'Membro'}</span>
@@ -358,7 +413,15 @@ export default function Shell({ usuario, onLogout }: ShellProps) {
                   type="search"
                   placeholder={meta[section].placeholder}
                   value={termo}
-                  onChange={(evento) => setTermo(evento.target.value)}
+                  onChange={(evento) => {
+                const valor = evento.target.value
+                setTermo(valor)
+                if (!valor.trim()) {
+                  setResultados([])
+                  setBuscaAberta(false)
+                  setErroBusca(null)
+                }
+              }}
                   onFocus={() => {
                     if (termo.trim()) setBuscaAberta(true)
                   }}
@@ -481,7 +544,13 @@ export default function Shell({ usuario, onLogout }: ShellProps) {
             </div>
 
             <ThemePicker />
-            <span className="avatar">{inicial}</span>
+            <button
+              className="avatar avatar-btn"
+              title="Editar meu perfil"
+              onClick={abrirPerfil}
+            >
+              {inicial}
+            </button>
           </div>
         </header>
 
@@ -497,6 +566,61 @@ export default function Shell({ usuario, onLogout }: ShellProps) {
           {section === 'team' && <Team usuario={usuario} />}
         </main>
       </div>
+
+      {perfilAberto && (
+        <Modal titulo="Meu perfil" onClose={() => setPerfilAberto(false)}>
+          <form className="form-grid" onSubmit={salvarPerfil}>
+            <label className="field">
+              <span>Nome completo</span>
+              <input
+                type="text"
+                value={perfilNome}
+                onChange={(evento) => setPerfilNome(evento.target.value)}
+                placeholder="Seu nome"
+              />
+            </label>
+
+            <label className="field">
+              <span>Cargo</span>
+              <input
+                type="text"
+                value={perfilCargo}
+                onChange={(evento) => setPerfilCargo(evento.target.value)}
+                placeholder="Opcional"
+              />
+            </label>
+
+            <label className="field">
+              <span>E-mail</span>
+              <input type="email" value={usuario.email} disabled />
+            </label>
+
+            <label className="field">
+              <span>Perfil de acesso</span>
+              <input
+                type="text"
+                value={usuario.perfil === 'ADMIN' ? 'Administrador' : 'Membro'}
+                disabled
+              />
+            </label>
+
+            {erroPerfil && <div className="form-error">{erroPerfil}</div>}
+
+            <div className="form-actions">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setPerfilAberto(false)}
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="btn-primary" disabled={salvandoPerfil}>
+                {salvandoPerfil ? 'Salvando...' : 'Salvar alterações'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   )
 }

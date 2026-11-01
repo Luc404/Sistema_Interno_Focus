@@ -71,6 +71,7 @@ export default function Chatbots({ usuario }: ChatbotsProps) {
   const [input, setInput] = useState('')
   const [pensando, setPensando] = useState(false)
   const corpoRef = useRef<HTMLDivElement>(null)
+  const idTemporarioRef = useRef(-1)
 
   // Formulário de criação/edição de bot
   const [modalBot, setModalBot] = useState(false)
@@ -118,10 +119,7 @@ export default function Chatbots({ usuario }: ChatbotsProps) {
 
   // Carrega o histórico do bot selecionado.
   useEffect(() => {
-    if (!selecionadoId) {
-      setMensagens([])
-      return
-    }
+    if (!selecionadoId) return
 
     let ativo = true
 
@@ -160,7 +158,8 @@ export default function Chatbots({ usuario }: ChatbotsProps) {
     const limpo = texto.trim()
     if (!limpo || !selecionado || pensando) return
 
-    const idTemporario = -Date.now()
+    const idTemporario = idTemporarioRef.current
+    idTemporarioRef.current -= 1
     const mensagemTemporaria: ChatMensagem = {
       id: idTemporario,
       chatbot_id: selecionado.id,

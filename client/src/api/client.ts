@@ -38,6 +38,7 @@ import type {
   TokenResponse,
   Usuario,
   UsuarioCreatePayload,
+  UsuarioSelfUpdatePayload,
   UsuarioUpdatePayload,
 } from './types'
 
@@ -251,6 +252,12 @@ export const api = {
   usuarios: {
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Usuario>>(`/usuarios/${queryString(params)}`),
+    me: () => request<Usuario>('/usuarios/me'),
+    updateMe: (dados: UsuarioSelfUpdatePayload) =>
+      request<Usuario>('/usuarios/me', {
+        method: 'PATCH',
+        body: JSON.stringify(dados),
+      }),
     create: (dados: UsuarioCreatePayload) =>
       request<Usuario>('/usuarios/', {
         method: 'POST',
