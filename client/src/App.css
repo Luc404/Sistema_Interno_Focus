@@ -300,6 +300,9 @@
   align-items: center;
   justify-content: center;
   color: var(--on-accent);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .checkbox.checked {
@@ -2836,6 +2839,71 @@
   box-shadow: 0 0 0 1px var(--on-accent);
 }
 
+/* ============ BACKLOG ============ */
+
+.backlog-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Seletor de prioridade ao lado da busca. */
+.filter-select {
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 0 10px;
+  outline: none;
+}
+
+.filter-select:focus {
+  border-color: var(--brand);
+}
+
+.kanban-card-title {
+  cursor: pointer;
+}
+
+.kanban-card-title:hover {
+  color: var(--brand);
+}
+
+/* Ações rápidas dentro do cartão (mover status/excluir). */
+.kanban-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.kanban-status {
+  flex: 1;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 0 8px;
+  outline: none;
+}
+
+.kanban-status:focus {
+  border-color: var(--brand);
+}
+
+.kanban-card.dragging {
+  opacity: 0.45;
+  transform: scale(0.98);
+}
+
 @media (max-width: 720px) {
   .form-row {
     grid-template-columns: 1fr;
@@ -2844,6 +2912,17 @@
   .calendar-nav {
     flex-wrap: wrap;
     justify-content: flex-end;
+  }
+
+  .backlog-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .backlog-filters,
+  .backlog-actions {
+    flex-wrap: wrap;
   }
 
   .librarium-top,
