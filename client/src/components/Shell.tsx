@@ -471,7 +471,7 @@ export default function Shell({ usuario, onLogout }: ShellProps) {
           {section === 'calendar' && <CalendarView usuario={usuario} />}
           {section === 'backlogs' && <Backlogs usuario={usuario} />}
           {section === 'chatbots' && <Chatbots usuario={usuario} />}
-          {section === 'notebooks' && <Notebooks />}
+          {section === 'notebooks' && <Notebooks usuario={usuario} />}
         </main>
       </div>
     </div>

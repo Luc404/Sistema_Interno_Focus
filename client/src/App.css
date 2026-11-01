@@ -259,6 +259,7 @@
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   background: var(--surface-subtle);
   border: 1px solid var(--border);
@@ -2127,6 +2128,7 @@
   line-height: 1.7;
   color: var(--text-2);
   margin: 0 0 14px;
+  white-space: pre-wrap;
 }
 
 .nb-callout {
