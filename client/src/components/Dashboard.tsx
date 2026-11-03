@@ -1,3 +1,11 @@
+/**
+ * Dashboard
+ *
+ * Painel inicial do sistema interno. É responsável por apresentar uma visão
+ * geral do usuário autenticado: indicadores rápidos, próximas reuniões,
+ * tarefas pessoais, resumo da equipe e atalhos para os módulos disponíveis.
+ * A navegação entre seções é delegada ao componente pai via `onNavigate`.
+ */
 import { useEffect, useState } from 'react'
 import type { ComponentType } from 'react'
 import { api, ApiError } from '../api/client'
@@ -80,6 +88,7 @@ function diaMes(iso: string): string {
 }
 
 export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
+  // Dados do painel: resumo geral, tarefas do usuário e setores ativos.
   const [resumo, setResumo] = useState<DashboardResumo | null>(null)
   const [tarefas, setTarefas] = useState<TarefaPessoal[]>([])
   const [setores, setSetores] = useState<Setor[]>([])
@@ -123,8 +132,10 @@ export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
     }
   }, [])
 
+  // Usa apenas o primeiro nome na saudação para tornar o texto mais pessoal.
   const primeiroNome = usuario.nome_completo.split(' ')[0]
 
+  // Cards de indicadores montados a partir do resumo carregado da API.
   const stats = [
     {
       icon: IconCalendar,
@@ -152,6 +163,7 @@ export default function Dashboard({ usuario, onNavigate }: DashboardProps) {
     },
   ]
 
+  // Estado de carregamento inicial enquanto os dados do painel são buscados.
   if (carregando) {
     return (
       <div className="page home-page">

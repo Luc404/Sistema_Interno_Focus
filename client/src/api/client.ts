@@ -227,21 +227,26 @@ async function requestBlob(path: string): Promise<Blob> {
  * Os componentes importam apenas `api` e não precisam montar URLs manualmente.
  */
 export const api = {
+  /** Autenticação: login, cadastro inicial, dados do usuário logado e troca de senha. */
   auth: {
+    /** Autentica com e-mail/senha e devolve o par de tokens JWT. */
     login: (email: string, senha: string) =>
       request<TokenResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, senha }),
       }),
 
+    /** Cadastra o primeiro administrador (permitido apenas com o banco vazio). */
     registrar: (dados: UsuarioCreatePayload) =>
       request<Usuario>('/auth/registrar', {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
 
+    /** Retorna o usuário autenticado a partir do token atual. */
     me: () => request<Usuario>('/auth/me'),
 
+    /** Troca a senha do usuário logado informando a senha atual. */
     alterarSenha: (senha_atual: string, nova_senha: string) =>
       request<{ mensagem: string }>('/auth/alterar-senha', {
         method: 'POST',
@@ -249,61 +254,81 @@ export const api = {
       }),
   },
 
+  /** Gerenciamento de usuários (listagem paginada, CRUD e ativação/desativação). */
   usuarios: {
+    /** Lista usuários com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Usuario>>(`/usuarios/${queryString(params)}`),
+    /** Retorna o próprio usuário logado via rota de usuários. */
     me: () => request<Usuario>('/usuarios/me'),
+    /** Atualiza os campos que o próprio usuário pode editar. */
     updateMe: (dados: UsuarioSelfUpdatePayload) =>
       request<Usuario>('/usuarios/me', {
         method: 'PATCH',
         body: JSON.stringify(dados),
       }),
+    /** Cria um novo usuário (ação administrativa). */
     create: (dados: UsuarioCreatePayload) =>
       request<Usuario>('/usuarios/', {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    /** Atualiza um usuário pelo identificador. */
     update: (id: number, dados: UsuarioUpdatePayload) =>
       request<Usuario>(`/usuarios/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(dados),
       }),
+    /** Reativa o acesso de um usuário. */
     ativar: (id: number) =>
       request<Usuario>(`/usuarios/${id}/ativar`, { method: 'POST' }),
+    /** Suspende o acesso de um usuário sem excluí-lo. */
     desativar: (id: number) =>
       request<Usuario>(`/usuarios/${id}/desativar`, { method: 'POST' }),
+    /** Remove um usuário definitivamente. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/usuarios/${id}`, { method: 'DELETE' }),
   },
 
+  /** Setores da empresa usados para organizar usuários e itens. */
   setores: {
+    /** Lista setores com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Setor>>(`/setores/${queryString(params)}`),
+    /** Cria um novo setor. */
     create: (dados: SetorPayload) =>
       request<Setor>('/setores/', {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    /** Atualiza parcialmente um setor. */
     update: (id: number, dados: Partial<SetorPayload>) =>
       request<Setor>(`/setores/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(dados),
       }),
+    /** Remove um setor. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/setores/${id}`, { method: 'DELETE' }),
   },
 
+  /** Indicadores consolidados exibidos na tela inicial. */
   dashboard: {
+    /** Busca o resumo com contadores e próximas reuniões. */
     resumo: () => request<DashboardResumo>('/dashboard/resumo'),
   },
 
+  /** Busca global por termo em todos os recursos indexados. */
   busca: (termo: string) =>
     request<RespostaBusca>(`/busca/${queryString({ q: termo })}`),
 
+  /** Arquivos enviados, incluindo upload multipart e download binário. */
   arquivos: {
+    /** Lista arquivos com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Arquivo>>(`/arquivos/${queryString(params)}`),
 
+    /** Envia um arquivo via FormData, associando categoria e pasta opcionais. */
     upload: (arquivo: File, titulo: string, categoriaId?: number, pastaId?: number) => {
       const form = new FormData()
       form.append('arquivo', arquivo)
@@ -313,21 +338,27 @@ export const api = {
       return request<Arquivo>('/arquivos/upload', { method: 'POST', body: form })
     },
 
+    /** Baixa o conteúdo binário do arquivo. */
     download: (id: number) => requestBlob(`/arquivos/${id}/download`),
 
+    /** Atualiza metadados do arquivo (título, categoria e pasta). */
     update: (id: number, dados: { titulo?: string; categoria_id?: number | null; pasta_id?: number | null }) =>
       request<Arquivo>(`/arquivos/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(dados),
       }),
 
+    /** Remove um arquivo. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/arquivos/${id}`, { method: 'DELETE' }),
   },
 
+  /** Categorias usadas para classificar arquivos. */
   categorias: {
+    /** Lista categorias com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Categoria>>(`/categorias/${queryString(params)}`),
+    /** Cria uma nova categoria. */
     create: (dados: { nome: string; descricao?: string | null }) =>
       request<Categoria>('/categorias/', {
         method: 'POST',
@@ -335,9 +366,12 @@ export const api = {
       }),
   },
 
+  /** Pastas hierárquicas usadas para organizar arquivos. */
   pastas: {
+    /** Lista pastas com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Pasta>>(`/pastas/${queryString(params)}`),
+    /** Cria uma pasta, opcionalmente vinculada a uma pasta pai. */
     create: (dados: { nome: string; descricao?: string | null; pasta_pai_id?: number | null }) =>
       request<Pasta>('/pastas/', {
         method: 'POST',
@@ -345,109 +379,142 @@ export const api = {
       }),
   },
 
+  /** Links úteis compartilhados pela equipe. */
   links: {
+    /** Lista links com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Link>>(`/links/${queryString(params)}`),
+    /** Cria um novo link. */
     create: (dados: LinkPayload) =>
       request<Link>('/links/', {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    /** Remove um link. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/links/${id}`, { method: 'DELETE' }),
   },
 
+  /** Itens de backlog (features, bugs, melhorias etc.). */
   backlog: {
+    /** Lista itens com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<BacklogItem>>(`/backlog/${queryString(params)}`),
+    /** Cria um item de backlog. */
     create: (dados: BacklogPayload) =>
       request<BacklogItem>('/backlog/', {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    /** Atualiza parcialmente um item de backlog. */
     update: (id: number, dados: Partial<BacklogPayload>) =>
       request<BacklogItem>(`/backlog/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(dados),
       }),
+    /** Altera somente o status do item (atalho para kanban/listas). */
     status: (id: number, status: BacklogItem['status']) =>
       request<BacklogItem>(`/backlog/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       }),
+    /** Remove um item de backlog. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/backlog/${id}`, { method: 'DELETE' }),
   },
 
+  /** Reuniões da agenda, incluindo participantes. */
   reunioes: {
+    /** Lista reuniões com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Reuniao>>(`/reunioes/${queryString(params)}`),
+    /** Cria uma reunião com horário e participantes. */
     create: (dados: ReuniaoPayload) =>
       request<Reuniao>('/reunioes/', {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    /** Atualiza parcialmente uma reunião. */
     update: (id: number, dados: Partial<ReuniaoPayload>) =>
       request<Reuniao>(`/reunioes/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(dados),
       }),
+    /** Remove uma reunião. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/reunioes/${id}`, { method: 'DELETE' }),
   },
 
+  /** Tarefas pessoais do usuário logado. */
   tarefas: {
+    /** Lista as tarefas do próprio usuário. */
     minhas: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<TarefaPessoal>>(`/tarefas-pessoais/minhas${queryString(params)}`),
+    /** Cria uma tarefa pessoal. */
     create: (dados: TarefaPayload) =>
       request<TarefaPessoal>('/tarefas-pessoais/', {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    /** Altera somente o status da tarefa. */
     status: (id: number, status: TarefaPessoal['status']) =>
       request<TarefaPessoal>(`/tarefas-pessoais/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       }),
+    /** Remove uma tarefa pessoal. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/tarefas-pessoais/${id}`, { method: 'DELETE' }),
   },
 
+  /** Mensalidades de clientes e seus indicadores financeiros. */
   mensalidades: {
+    /** Lista mensalidades com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Mensalidade>>(`/mensalidades/${queryString(params)}`),
+    /** Cria uma nova mensalidade. */
     create: (dados: MensalidadePayload) =>
       request<Mensalidade>('/mensalidades/', {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    /** Marca a mensalidade como paga, aceitando uma data opcional. */
     pagar: (id: number, data_pagamento?: string | null) =>
       request<Mensalidade>(`/mensalidades/${id}/pagar`, {
         method: 'PATCH',
         body: JSON.stringify({ data_pagamento: data_pagamento ?? null }),
       }),
+    /** Busca o resumo financeiro (pendentes, pagas, atrasadas e valores). */
     resumo: () => request<MensalidadeResumo>('/mensalidades/resumo'),
+    /** Remove uma mensalidade. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/mensalidades/${id}`, { method: 'DELETE' }),
   },
 
+  /** Chatbots de IA, incluindo histórico e envio de mensagens. */
   chatbots: {
+    /** Lista chatbots com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Chatbot>>(`/chatbots/${queryString(params)}`),
+    /** Cria um novo chatbot. */
     create: (dados: ChatbotPayload) =>
       request<Chatbot>('/chatbots/', {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    /** Atualiza parcialmente um chatbot. */
     update: (id: number, dados: Partial<ChatbotPayload>) =>
       request<Chatbot>(`/chatbots/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(dados),
       }),
+    /** Remove um chatbot. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/chatbots/${id}`, { method: 'DELETE' }),
+    /** Lista o histórico de mensagens de um chatbot. */
     mensagens: (id: number, params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<ChatMensagem>>(`/chatbots/${id}/mensagens${queryString(params)}`),
+    /** Envia uma mensagem e devolve a resposta gerada pelo chatbot. */
     enviar: (id: number, conteudo: string) =>
       request<ChatResposta>(`/chatbots/${id}/mensagens`, {
         method: 'POST',
@@ -455,30 +522,40 @@ export const api = {
       }),
   },
 
+  /** Notebooks/documentação interna organizados por grupo. */
   notebooks: {
+    /** Lista notebooks com filtros e paginação opcionais. */
     list: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Notebook>>(`/notebooks/${queryString(params)}`),
+    /** Cria um novo notebook. */
     create: (dados: NotebookPayload) =>
       request<Notebook>('/notebooks/', {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
+    /** Atualiza parcialmente um notebook. */
     update: (id: number, dados: Partial<NotebookPayload>) =>
       request<Notebook>(`/notebooks/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(dados),
       }),
+    /** Remove um notebook. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/notebooks/${id}`, { method: 'DELETE' }),
   },
 
+  /** Notificações do usuário logado. */
   notificacoes: {
+    /** Lista as notificações do próprio usuário. */
     minhas: (params?: Record<string, string | number | boolean | null | undefined>) =>
       request<Page<Notificacao>>(`/notificacoes/minhas${queryString(params)}`),
+    /** Marca uma notificação como lida. */
     ler: (id: number) =>
       request<Notificacao>(`/notificacoes/${id}/ler`, { method: 'PATCH' }),
+    /** Marca todas as notificações como lidas. */
     lerTodas: () =>
       request<{ mensagem: string }>('/notificacoes/ler-todas', { method: 'PATCH' }),
+    /** Remove uma notificação. */
     remove: (id: number) =>
       request<{ mensagem: string }>(`/notificacoes/${id}`, { method: 'DELETE' }),
   },
