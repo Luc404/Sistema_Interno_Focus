@@ -1,3 +1,19 @@
+"""Router de chatbots e conversas.
+
+Gerencia o cadastro de chatbots (administração), a listagem/consulta de bots e
+o histórico de mensagens, além do envio de mensagens que gera uma resposta do
+bot e a persiste na conversa do usuário.
+
+Endpoints expostos (prefixo ``/api/chatbots``):
+- ``POST /``                            -> cria chatbot (ADMIN);
+- ``GET /``                             -> lista chatbots;
+- ``GET /{chatbot_id}``                 -> consulta chatbot;
+- ``PATCH /{chatbot_id}``               -> atualiza chatbot (ADMIN);
+- ``DELETE /{chatbot_id}``              -> exclui chatbot (ADMIN);
+- ``GET /{chatbot_id}/mensagens``       -> histórico paginado;
+- ``POST /{chatbot_id}/mensagens``      -> envia mensagem e recebe resposta.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -15,6 +31,7 @@ from app.schemas.chatbot_schema import (
 from app.schemas.common import Mensagem, Page
 from app.services import chatbot_service
 
+# Prefixo e tag OpenAPI das rotas de chatbots.
 router = APIRouter(prefix="/api/chatbots", tags=["Chatbots"])
 
 
@@ -24,6 +41,11 @@ def criar_chatbot(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Cria um novo chatbot, registrando o usuário criador.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``ChatbotResponse`` criado (HTTP 201).
+    """
     return chatbot_service.criar_chatbot(db, dados, usuario.id)
 
 
@@ -36,6 +58,14 @@ def listar_chatbots(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista chatbots com paginação, busca e filtro de status.
+
+    O filtro de status é exposto como query ``status`` via ``alias``.
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``Page[ChatbotResponse]``.
+    """
     return chatbot_service.listar_chatbots(
         db, skip=skip, limit=limit, busca=busca, status_bot=status_bot
     )
@@ -47,6 +77,11 @@ def obter_chatbot(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Consulta um chatbot pelo identificador.
+
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``ChatbotResponse`` ou HTTP 404 se não existir.
+    """
     chatbot = chatbot_service.obter_chatbot(db, chatbot_id)
     if not chatbot:
         raise HTTPException(status_code=404, detail="Chatbot não encontrado")
@@ -60,6 +95,12 @@ def atualizar_chatbot(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Atualiza parcialmente um chatbot.
+
+    Apenas campos enviados são aplicados (``exclude_unset=True``).
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``ChatbotResponse`` atualizado; HTTP 404 se não existir.
+    """
     chatbot = chatbot_service.obter_chatbot(db, chatbot_id)
     if not chatbot:
         raise HTTPException(status_code=404, detail="Chatbot não encontrado")
@@ -72,6 +113,11 @@ def deletar_chatbot(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Exclui um chatbot.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``Mensagem`` de confirmação; HTTP 404 se não existir.
+    """
     chatbot = chatbot_service.obter_chatbot(db, chatbot_id)
     if not chatbot:
         raise HTTPException(status_code=404, detail="Chatbot não encontrado")
@@ -87,6 +133,12 @@ def listar_mensagens(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista o histórico de mensagens de um chatbot, de forma paginada.
+
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``Page[ChatMensagemResponse]``; HTTP 404 se o bot não existir.
+    """
     chatbot = chatbot_service.obter_chatbot(db, chatbot_id)
     if not chatbot:
         raise HTTPException(status_code=404, detail="Chatbot não encontrado")
@@ -100,6 +152,15 @@ def enviar_mensagem(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Envia uma mensagem do usuário ao chatbot e retorna a resposta gerada.
+
+    A mensagem do usuário e a resposta do bot são persistidas pelo serviço,
+    associadas ao usuário autenticado.
+
+    Autenticação: obrigatória.
+    Retorno: ``ChatResposta`` contendo a mensagem do usuário e a resposta;
+    HTTP 404 se o chatbot não existir.
+    """
     chatbot = chatbot_service.obter_chatbot(db, chatbot_id)
     if not chatbot:
         raise HTTPException(status_code=404, detail="Chatbot não encontrado")

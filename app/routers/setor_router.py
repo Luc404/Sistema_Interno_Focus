@@ -1,3 +1,17 @@
+"""Router de setores.
+
+Permite criar, listar com filtros, consultar, atualizar e excluir setores da
+organização. Operações de escrita exigem perfil ADMIN; leitura exige usuário
+autenticado.
+
+Endpoints expostos (prefixo ``/api/setores``):
+- ``POST /``             -> cria setor (ADMIN);
+- ``GET /``              -> listagem paginada com filtros;
+- ``GET /{setor_id}``    -> consulta setor;
+- ``PATCH /{setor_id}``  -> atualização parcial (ADMIN);
+- ``DELETE /{setor_id}`` -> exclusão (ADMIN).
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -8,6 +22,7 @@ from app.schemas.common import Mensagem, Page
 from app.schemas.setor_schema import SetorCreate, SetorResponse, SetorUpdate
 from app.services import setor_service
 
+# Prefixo e tag OpenAPI das rotas de setores.
 router = APIRouter(prefix="/api/setores", tags=["Setores"])
 
 
@@ -17,6 +32,11 @@ def criar_setor(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Cria um novo setor.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``SetorResponse`` criado (HTTP 201).
+    """
     return setor_service.criar_setor(db=db, setor=setor)
 
 
@@ -29,6 +49,14 @@ def listar_setores(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista setores com paginação, busca e filtro de status.
+
+    O filtro de status é exposto como query ``status`` via ``alias``.
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``Page[SetorResponse]``.
+    """
     return setor_service.listar_setores(
         db=db,
         skip=skip,
@@ -44,6 +72,11 @@ def obter_setor(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Consulta um setor pelo identificador.
+
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``SetorResponse`` ou HTTP 404 se não existir.
+    """
     db_setor = setor_service.obter_setor_por_id(db=db, setor_id=setor_id)
     if not db_setor:
         raise HTTPException(status_code=404, detail="Setor não encontrado")
@@ -57,6 +90,12 @@ def atualizar_setor(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Atualiza parcialmente um setor.
+
+    Apenas campos enviados são aplicados (``exclude_unset=True``).
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``SetorResponse`` atualizado; HTTP 404 se não existir.
+    """
     db_setor = setor_service.obter_setor_por_id(db=db, setor_id=setor_id)
     if not db_setor:
         raise HTTPException(status_code=404, detail="Setor não encontrado")
@@ -69,6 +108,11 @@ def deletar_setor(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Exclui um setor.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``Mensagem`` de confirmação; HTTP 404 se não existir.
+    """
     db_setor = setor_service.obter_setor_por_id(db=db, setor_id=setor_id)
     if not db_setor:
         raise HTTPException(status_code=404, detail="Setor não encontrado")

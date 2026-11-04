@@ -1,3 +1,19 @@
+"""Router das mensalidades dos clientes.
+
+Gerencia o ciclo de vida das mensalidades (criação, listagem, resumo,
+consulta, atualização, pagamento e exclusão). Operações de escrita exigem
+perfil ADMIN; leitura exige usuário autenticado.
+
+Endpoints expostos (prefixo ``/api/mensalidades``):
+- ``POST /``                     -> cria mensalidade (ADMIN);
+- ``GET /``                      -> listagem paginada com filtros;
+- ``GET /resumo``                -> resumo financeiro agregado;
+- ``GET /{mensalidade_id}``      -> consulta mensalidade;
+- ``PATCH /{mensalidade_id}``    -> atualização parcial (ADMIN);
+- ``PATCH /{mensalidade_id}/pagar`` -> registra pagamento (ADMIN);
+- ``DELETE /{mensalidade_id}``   -> exclusão (ADMIN).
+"""
+
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -16,6 +32,7 @@ from app.schemas.mensalidade_cliente_schema import (
 )
 from app.services import mensalidade_cliente_service
 
+# Prefixo e tag OpenAPI das rotas de mensalidades.
 router = APIRouter(prefix="/api/mensalidades", tags=["Agenda - Mensalidades dos Clientes"])
 
 
@@ -25,6 +42,11 @@ def criar_mensalidade(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Cria uma nova mensalidade de cliente.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``MensalidadeClienteResponse`` criada (HTTP 201).
+    """
     return mensalidade_cliente_service.criar_mensalidade(db=db, mensalidade=mensalidade)
 
 
@@ -39,6 +61,15 @@ def listar_mensalidades(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista mensalidades com paginação e filtros.
+
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+    Os filtros incluem status de pagamento e intervalo de vencimento
+    (``vencimento_inicio``/``vencimento_fim``).
+
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``Page[MensalidadeClienteResponse]``.
+    """
     return mensalidade_cliente_service.listar_mensalidades(
         db=db,
         skip=skip,
@@ -50,11 +81,18 @@ def listar_mensalidades(
     )
 
 
+# Rota estática declarada antes da rota parametrizada para não colidir com
+# `/{mensalidade_id}`.
 @router.get("/resumo", response_model=MensalidadeResumo)
 def obter_resumo(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Retorna o resumo financeiro agregado das mensalidades.
+
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``MensalidadeResumo`` com os totais calculados pelo serviço.
+    """
     return mensalidade_cliente_service.resumo(db)
 
 
@@ -64,6 +102,11 @@ def obter_mensalidade(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Consulta uma mensalidade pelo identificador.
+
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``MensalidadeClienteResponse`` ou HTTP 404 se não existir.
+    """
     db_mensalidade = mensalidade_cliente_service.obter_mensalidade_por_id(
         db=db, mensalidade_id=mensalidade_id
     )
@@ -79,6 +122,12 @@ def atualizar_mensalidade(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Atualiza parcialmente uma mensalidade.
+
+    Apenas campos enviados são aplicados (``exclude_unset=True``).
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``MensalidadeClienteResponse`` atualizada; HTTP 404 se não existir.
+    """
     db_mensalidade = mensalidade_cliente_service.obter_mensalidade_por_id(
         db=db, mensalidade_id=mensalidade_id
     )
@@ -96,6 +145,14 @@ def pagar_mensalidade(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Registra o pagamento de uma mensalidade.
+
+    Os dados de pagamento são repassados ao serviço, que atualiza o status e
+    demais informações da mensalidade.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``MensalidadeClienteResponse`` atualizada; HTTP 404 se não existir.
+    """
     db_mensalidade = mensalidade_cliente_service.obter_mensalidade_por_id(
         db=db, mensalidade_id=mensalidade_id
     )
@@ -110,6 +167,11 @@ def deletar_mensalidade(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Exclui uma mensalidade.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``Mensagem`` de confirmação; HTTP 404 se não existir.
+    """
     db_mensalidade = mensalidade_cliente_service.obter_mensalidade_por_id(
         db=db, mensalidade_id=mensalidade_id
     )

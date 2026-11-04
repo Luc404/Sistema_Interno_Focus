@@ -1,3 +1,17 @@
+"""Router da biblioteca de links úteis.
+
+Permite cadastrar, listar com filtros, consultar, atualizar e excluir links
+favoritos. Cada link pertence ao usuário que o cadastrou (``usuario_id``),
+obtido do token.
+
+Endpoints expostos (prefixo ``/api/links``):
+- ``POST /``           -> cria link;
+- ``GET /``            -> listagem paginada com filtros;
+- ``GET /{link_id}``   -> consulta link;
+- ``PATCH /{link_id}`` -> atualização parcial;
+- ``DELETE /{link_id}``-> exclusão.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -8,6 +22,7 @@ from app.schemas.common import Mensagem, Page
 from app.schemas.link_schema import LinkCreate, LinkResponse, LinkUpdate
 from app.services import link_service
 
+# Prefixo e tag OpenAPI das rotas de links.
 router = APIRouter(prefix="/api/links", tags=["Biblioteca - Links Úteis"])
 
 
@@ -17,6 +32,11 @@ def criar_link(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Cria um novo link associado ao usuário autenticado.
+
+    Autenticação: obrigatória; o dono é definido pelo token.
+    Retorno: ``LinkResponse`` criado (HTTP 201).
+    """
     return link_service.criar_link(db=db, link=link, usuario_id=usuario.id)
 
 
@@ -30,6 +50,12 @@ def listar_links(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista links com paginação e filtros opcionais.
+
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+    Autenticação: obrigatória.
+    Retorno: ``Page[LinkResponse]`` com total e itens da página.
+    """
     return link_service.listar_links(
         db=db,
         skip=skip,
@@ -46,6 +72,11 @@ def obter_link(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Consulta um link pelo identificador.
+
+    Autenticação: obrigatória.
+    Retorno: ``LinkResponse`` ou HTTP 404 se não existir.
+    """
     db_link = link_service.obter_link_por_id(db=db, link_id=link_id)
     if not db_link:
         raise HTTPException(status_code=404, detail="Link não encontrado")
@@ -59,9 +90,16 @@ def atualizar_link(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Atualiza parcialmente um link.
+
+    Apenas campos enviados são aplicados (``exclude_unset=True``).
+    Autenticação/permissão: somente o dono do link ou ADMIN.
+    Retorno: ``LinkResponse`` atualizado; HTTP 404 se não existir.
+    """
     db_link = link_service.obter_link_por_id(db=db, link_id=link_id)
     if not db_link:
         raise HTTPException(status_code=404, detail="Link não encontrado")
+    # Garante que o usuário seja o dono do link ou administrador.
     ensure_owner_or_admin(usuario, db_link.usuario_id)
     return link_service.atualizar_link(db, db_link, dados.model_dump(exclude_unset=True))
 
@@ -72,6 +110,11 @@ def deletar_link(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Exclui um link.
+
+    Autenticação/permissão: somente o dono do link ou ADMIN.
+    Retorno: ``Mensagem`` de confirmação; HTTP 404 se não existir.
+    """
     db_link = link_service.obter_link_por_id(db=db, link_id=link_id)
     if not db_link:
         raise HTTPException(status_code=404, detail="Link não encontrado")

@@ -1,3 +1,19 @@
+"""Router de tarefas pessoais da agenda.
+
+Permite criar, listar (as próprias ou de outro usuário, com permissão),
+consultar, atualizar, alterar status e excluir tarefas pessoais. Cada tarefa
+pertence ao usuário informado no token ou ao usuário consultado.
+
+Endpoints expostos (prefixo ``/api/tarefas-pessoais``):
+- ``POST /``                         -> cria tarefa;
+- ``GET /minhas``                    -> lista tarefas do usuário autenticado;
+- ``GET /usuario/{usuario_id}``      -> lista tarefas de outro usuário (dono/ADMIN);
+- ``GET /{tarefa_id}``               -> consulta tarefa;
+- ``PATCH /{tarefa_id}``             -> atualização parcial;
+- ``PATCH /{tarefa_id}/status``      -> altera somente o status;
+- ``DELETE /{tarefa_id}``            -> exclusão.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -13,6 +29,7 @@ from app.schemas.tarefa_pessoal_schema import (
 )
 from app.services import tarefa_pessoal_service
 
+# Prefixo e tag OpenAPI das rotas de tarefas pessoais.
 router = APIRouter(prefix="/api/tarefas-pessoais", tags=["Agenda - Tarefas Pessoais"])
 
 
@@ -22,6 +39,11 @@ def criar_tarefa(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Cria uma tarefa pessoal para o usuário autenticado.
+
+    Autenticação: obrigatória; o dono é definido pelo token.
+    Retorno: ``TarefaPessoalResponse`` criada (HTTP 201).
+    """
     return tarefa_pessoal_service.criar_tarefa(db=db, tarefa=tarefa, usuario_id=usuario.id)
 
 
@@ -34,6 +56,14 @@ def listar_minhas_tarefas(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Lista as tarefas pessoais do usuário autenticado.
+
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+    O filtro de status é exposto como query ``status`` via ``alias``.
+
+    Autenticação: obrigatória; o resultado é restrito ao próprio usuário.
+    Retorno: ``Page[TarefaPessoalResponse]``.
+    """
     return tarefa_pessoal_service.listar_tarefas_por_usuario(
         db=db,
         usuario_id=usuario.id,
@@ -54,6 +84,13 @@ def listar_tarefas_usuario(
     db: Session = Depends(get_db),
     atual: Usuario = Depends(get_current_user),
 ):
+    """Lista as tarefas pessoais de um usuário específico.
+
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+    Autenticação/permissão: somente o próprio usuário ou ADMIN.
+    Retorno: ``Page[TarefaPessoalResponse]``.
+    """
+    # Impede que um usuário consulte as tarefas de outro sem ser ADMIN.
     ensure_owner_or_admin(atual, usuario_id)
     return tarefa_pessoal_service.listar_tarefas_por_usuario(
         db=db,
@@ -71,6 +108,11 @@ def obter_tarefa(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Consulta uma tarefa pessoal pelo identificador.
+
+    Autenticação/permissão: somente o dono da tarefa ou ADMIN.
+    Retorno: ``TarefaPessoalResponse`` ou HTTP 404 se não existir.
+    """
     db_tarefa = tarefa_pessoal_service.obter_tarefa_por_id(db=db, tarefa_id=tarefa_id)
     if not db_tarefa:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
@@ -85,6 +127,12 @@ def atualizar_tarefa(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Atualiza parcialmente uma tarefa pessoal.
+
+    Apenas campos enviados são aplicados (``exclude_unset=True``).
+    Autenticação/permissão: somente o dono da tarefa ou ADMIN.
+    Retorno: ``TarefaPessoalResponse`` atualizada; HTTP 404 se não existir.
+    """
     db_tarefa = tarefa_pessoal_service.obter_tarefa_por_id(db=db, tarefa_id=tarefa_id)
     if not db_tarefa:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
@@ -101,6 +149,11 @@ def alterar_status_tarefa(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Altera somente o status de uma tarefa pessoal.
+
+    Autenticação/permissão: somente o dono da tarefa ou ADMIN.
+    Retorno: ``TarefaPessoalResponse`` com o novo status.
+    """
     db_tarefa = tarefa_pessoal_service.obter_tarefa_por_id(db=db, tarefa_id=tarefa_id)
     if not db_tarefa:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
@@ -114,6 +167,11 @@ def deletar_tarefa(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Exclui uma tarefa pessoal.
+
+    Autenticação/permissão: somente o dono da tarefa ou ADMIN.
+    Retorno: ``Mensagem`` de confirmação; HTTP 404 se não existir.
+    """
     db_tarefa = tarefa_pessoal_service.obter_tarefa_por_id(db=db, tarefa_id=tarefa_id)
     if not db_tarefa:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")

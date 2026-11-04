@@ -1,3 +1,18 @@
+"""Routers da biblioteca de categorias e pastas.
+
+Define dois roteadores no mesmo módulo: ``/api/categorias`` para categorias e
+``/api/pastas`` para pastas da biblioteca. Operações de escrita exigem perfil
+ADMIN; operações de leitura exigem usuário autenticado.
+
+Endpoints de categorias (prefixo ``/api/categorias``):
+- ``POST /``, ``GET /``, ``GET /{categoria_id}``, ``PATCH /{categoria_id}``,
+  ``DELETE /{categoria_id}``.
+
+Endpoints de pastas (prefixo ``/api/pastas``):
+- ``POST /``, ``GET /``, ``GET /{pasta_id}``, ``PATCH /{pasta_id}``,
+  ``DELETE /{pasta_id}``.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -15,6 +30,7 @@ from app.schemas.categoria_schema import (
 from app.schemas.common import Mensagem, Page
 from app.services import categoria_service
 
+# Roteador de categorias e roteador separado de pastas (prefixos distintos).
 router = APIRouter(prefix="/api/categorias", tags=["Biblioteca - Categorias"])
 pasta_router = APIRouter(prefix="/api/pastas", tags=["Biblioteca - Pastas"])
 
@@ -25,6 +41,11 @@ def criar_categoria(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Cria uma nova categoria da biblioteca.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``CategoriaResponse`` criada (HTTP 201).
+    """
     return categoria_service.criar_categoria(db, dados)
 
 
@@ -36,6 +57,12 @@ def listar_categorias(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista categorias com paginação e busca opcional.
+
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``Page[CategoriaResponse]``.
+    """
     return categoria_service.listar_categorias(db, skip, limit, busca)
 
 
@@ -45,6 +72,11 @@ def obter_categoria(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Consulta uma categoria pelo identificador.
+
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``CategoriaResponse`` ou HTTP 404 se não existir.
+    """
     categoria = categoria_service.obter_categoria(db, categoria_id)
     if not categoria:
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
@@ -58,6 +90,12 @@ def atualizar_categoria(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Atualiza parcialmente uma categoria.
+
+    Apenas campos enviados são aplicados (``exclude_unset=True``).
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``CategoriaResponse`` atualizada; HTTP 404 se não existir.
+    """
     categoria = categoria_service.obter_categoria(db, categoria_id)
     if not categoria:
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
@@ -72,6 +110,11 @@ def deletar_categoria(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Exclui uma categoria.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``Mensagem`` de confirmação; HTTP 404 se não existir.
+    """
     categoria = categoria_service.obter_categoria(db, categoria_id)
     if not categoria:
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
@@ -79,12 +122,18 @@ def deletar_categoria(
     return Mensagem(mensagem="Categoria excluída com sucesso")
 
 
+# As rotas de pasta abaixo usam o `pasta_router` (prefixo /api/pastas).
 @pasta_router.post("/", response_model=PastaResponse, status_code=status.HTTP_201_CREATED)
 def criar_pasta(
     dados: PastaCreate,
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Cria uma nova pasta da biblioteca.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``PastaResponse`` criada (HTTP 201).
+    """
     return categoria_service.criar_pasta(db, dados)
 
 
@@ -96,6 +145,12 @@ def listar_pastas(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista pastas com paginação e busca opcional.
+
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``Page[PastaResponse]``.
+    """
     return categoria_service.listar_pastas(db, skip, limit, busca)
 
 
@@ -105,6 +160,11 @@ def obter_pasta(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Consulta uma pasta pelo identificador.
+
+    Autenticação: qualquer usuário autenticado.
+    Retorno: ``PastaResponse`` ou HTTP 404 se não existir.
+    """
     pasta = categoria_service.obter_pasta(db, pasta_id)
     if not pasta:
         raise HTTPException(status_code=404, detail="Pasta não encontrada")
@@ -118,6 +178,12 @@ def atualizar_pasta(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Atualiza parcialmente uma pasta.
+
+    Apenas campos enviados são aplicados (``exclude_unset=True``).
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``PastaResponse`` atualizada; HTTP 404 se não existir.
+    """
     pasta = categoria_service.obter_pasta(db, pasta_id)
     if not pasta:
         raise HTTPException(status_code=404, detail="Pasta não encontrada")
@@ -130,6 +196,11 @@ def deletar_pasta(
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_perfis("ADMIN")),
 ):
+    """Exclui uma pasta.
+
+    Autenticação/permissão: exige perfil ADMIN.
+    Retorno: ``Mensagem`` de confirmação; HTTP 404 se não existir.
+    """
     pasta = categoria_service.obter_pasta(db, pasta_id)
     if not pasta:
         raise HTTPException(status_code=404, detail="Pasta não encontrada")

@@ -1,3 +1,21 @@
+"""Router de reuniões da agenda.
+
+Gerencia reuniões e seus participantes: criação (com notificação dos
+convidados), listagem com filtros, próximas reuniões, consulta, atualização,
+exclusão e inclusão/remoção de participantes (com notificação).
+
+Endpoints expostos (prefixo ``/api/reunioes``):
+- ``POST /``                                  -> cria reunião;
+- ``GET /``                                   -> listagem paginada;
+- ``GET /proximas``                           -> próximas reuniões;
+- ``GET /{reuniao_id}``                       -> consulta reunião;
+- ``PATCH /{reuniao_id}``                     -> atualização parcial;
+- ``DELETE /{reuniao_id}``                    -> exclusão;
+- ``GET /{reuniao_id}/participantes``         -> lista participantes;
+- ``POST /{reuniao_id}/participantes/{usuario_id}``   -> adiciona participante;
+- ``DELETE /{reuniao_id}/participantes/{usuario_id}`` -> remove participante.
+"""
+
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -11,6 +29,7 @@ from app.schemas.reuniao_schema import ReuniaoCreate, ReuniaoResponse, ReuniaoUp
 from app.schemas.usuario_schema import UsuarioResumo
 from app.services import notificacao_service, reuniao_service, usuario_service
 
+# Prefixo e tag OpenAPI das rotas de reuniões.
 router = APIRouter(prefix="/api/reunioes", tags=["Agenda - Reuniões"])
 
 
@@ -20,7 +39,17 @@ def criar_reuniao(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Cria uma reunião e notifica os participantes convidados.
+
+    O criador é sempre o usuário autenticado (``criador_id``). Se houver
+    ``participantes_ids``, cada convidado recebe uma notificação com link para
+    a reunião.
+
+    Autenticação: obrigatória.
+    Retorno: ``ReuniaoResponse`` criada (HTTP 201).
+    """
     db_reuniao = reuniao_service.criar_reuniao(db=db, reuniao=reuniao, criador_id=usuario.id)
+    # Notificação em lote somente quando há participantes informados.
     if reuniao.participantes_ids:
         notificacao_service.criar_para_usuarios(
             db,
@@ -45,6 +74,15 @@ def listar_reunioes(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista reuniões com paginação e filtros.
+
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+    Filtros disponíveis: busca textual, intervalo de datas, criador e
+    participante.
+
+    Autenticação: obrigatória.
+    Retorno: ``Page[ReuniaoResponse]``.
+    """
     return reuniao_service.listar_reunioes(
         db=db,
         skip=skip,
@@ -57,12 +95,21 @@ def listar_reunioes(
     )
 
 
+# Rota estática declarada antes de `/{reuniao_id}` para evitar conflito de match.
 @router.get("/proximas", response_model=list[ReuniaoResponse])
 def listar_proximas_reunioes(
     limite: int = Query(5, ge=1, le=50),
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista as próximas reuniões, ordenadas cronologicamente.
+
+    Parâmetros:
+    - ``limite``: quantidade máxima de reuniões (1 a 50; padrão 5).
+
+    Autenticação: obrigatória.
+    Retorno: lista de ``ReuniaoResponse``.
+    """
     return reuniao_service.listar_proximas(db, limite)
 
 
@@ -72,6 +119,11 @@ def obter_reuniao(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Consulta uma reunião pelo identificador.
+
+    Autenticação: obrigatória.
+    Retorno: ``ReuniaoResponse`` ou HTTP 404 se não existir.
+    """
     db_reuniao = reuniao_service.obter_reuniao_por_id(db=db, reuniao_id=reuniao_id)
     if not db_reuniao:
         raise HTTPException(status_code=404, detail="Reunião não encontrada")
@@ -85,9 +137,16 @@ def atualizar_reuniao(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Atualiza parcialmente uma reunião.
+
+    Apenas campos enviados são aplicados (``exclude_unset=True``).
+    Autenticação/permissão: somente o criador da reunião ou ADMIN.
+    Retorno: ``ReuniaoResponse`` atualizada; HTTP 404 se não existir.
+    """
     db_reuniao = reuniao_service.obter_reuniao_por_id(db=db, reuniao_id=reuniao_id)
     if not db_reuniao:
         raise HTTPException(status_code=404, detail="Reunião não encontrada")
+    # Garante que o usuário seja o criador da reunião ou administrador.
     ensure_owner_or_admin(usuario, db_reuniao.criador_id)
     return reuniao_service.atualizar_reuniao(
         db, db_reuniao, dados.model_dump(exclude_unset=True)
@@ -100,6 +159,11 @@ def deletar_reuniao(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Exclui uma reunião.
+
+    Autenticação/permissão: somente o criador da reunião ou ADMIN.
+    Retorno: ``Mensagem`` de confirmação; HTTP 404 se não existir.
+    """
     db_reuniao = reuniao_service.obter_reuniao_por_id(db=db, reuniao_id=reuniao_id)
     if not db_reuniao:
         raise HTTPException(status_code=404, detail="Reunião não encontrada")
@@ -114,6 +178,11 @@ def listar_participantes(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista os participantes de uma reunião.
+
+    Autenticação: obrigatória.
+    Retorno: lista de ``UsuarioResumo``; HTTP 404 se a reunião não existir.
+    """
     db_reuniao = reuniao_service.obter_reuniao_por_id(db=db, reuniao_id=reuniao_id)
     if not db_reuniao:
         raise HTTPException(status_code=404, detail="Reunião não encontrada")
@@ -127,14 +196,22 @@ def adicionar_participante(
     db: Session = Depends(get_db),
     atual: Usuario = Depends(get_current_user),
 ):
+    """Adiciona um participante à reunião e o notifica.
+
+    Autenticação/permissão: somente o criador da reunião ou ADMIN.
+    Retorno: ``ReuniaoResponse`` atualizada; HTTP 404 se a reunião ou o
+    participante não existirem.
+    """
     db_reuniao = reuniao_service.obter_reuniao_por_id(db=db, reuniao_id=reuniao_id)
     if not db_reuniao:
         raise HTTPException(status_code=404, detail="Reunião não encontrada")
+    # Somente o criador ou um administrador pode alterar os participantes.
     ensure_owner_or_admin(atual, db_reuniao.criador_id)
     participante = usuario_service.obter_usuario_por_id(db, usuario_id)
     if not participante:
         raise HTTPException(status_code=404, detail="Participante não encontrado")
     db_reuniao = reuniao_service.adicionar_participante(db, db_reuniao, participante)
+    # Notifica o novo participante sobre a inclusão na reunião.
     notificacao_service.criar_para_usuarios(
         db,
         [usuario_id],
@@ -153,6 +230,12 @@ def remover_participante(
     db: Session = Depends(get_db),
     atual: Usuario = Depends(get_current_user),
 ):
+    """Remove um participante da reunião.
+
+    Autenticação/permissão: somente o criador da reunião ou ADMIN.
+    Retorno: ``ReuniaoResponse`` atualizada; HTTP 404 se a reunião ou o
+    participante não existirem.
+    """
     db_reuniao = reuniao_service.obter_reuniao_por_id(db=db, reuniao_id=reuniao_id)
     if not db_reuniao:
         raise HTTPException(status_code=404, detail="Reunião não encontrada")

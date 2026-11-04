@@ -1,3 +1,18 @@
+"""Router do backlog de itens (ideias, tarefas e melhorias).
+
+Permite criar, listar com filtros, consultar, atualizar, alterar status e
+excluir itens de backlog. Cada item é associado ao usuário que o criou
+(``autor_id``), obtido do token.
+
+Endpoints expostos (prefixo ``/api/backlog``):
+- ``POST /``                -> cria item;
+- ``GET /``                 -> listagem paginada com filtros;
+- ``GET /{item_id}``        -> consulta item;
+- ``PATCH /{item_id}``      -> atualização parcial;
+- ``PATCH /{item_id}/status`` -> altera somente o status;
+- ``DELETE /{item_id}``     -> exclusão.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -13,6 +28,7 @@ from app.schemas.backlog_schema import (
 from app.schemas.common import Mensagem, Page
 from app.services import backlog_service
 
+# Prefixo e tag OpenAPI aplicados às rotas do backlog.
 router = APIRouter(prefix="/api/backlog", tags=["Backlog"])
 
 
@@ -22,6 +38,12 @@ def criar_item_backlog(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Cria um novo item de backlog para o usuário autenticado.
+
+    O autor é sempre o usuário do token (``autor_id=usuario.id``).
+    Autenticação: obrigatória.
+    Retorno: ``BacklogResponse`` do item criado (HTTP 201).
+    """
     return backlog_service.criar_item(db=db, item=item, autor_id=usuario.id)
 
 
@@ -38,6 +60,14 @@ def listar_itens_backlog(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista itens de backlog com paginação e filtros opcionais.
+
+    ``skip``/``limit`` controlam a paginação (máximo de 500 por página).
+    O filtro de status é exposto como query ``status`` via ``alias``.
+
+    Autenticação: obrigatória.
+    Retorno: ``Page[BacklogResponse]`` com total e itens da página.
+    """
     return backlog_service.listar_itens(
         db=db,
         skip=skip,
@@ -57,6 +87,11 @@ def obter_item_backlog(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Consulta um item de backlog pelo identificador.
+
+    Autenticação: obrigatória.
+    Retorno: ``BacklogResponse`` ou HTTP 404 se não existir.
+    """
     db_item = backlog_service.obter_item_por_id(db=db, item_id=item_id)
     if not db_item:
         raise HTTPException(status_code=404, detail="Item do backlog não encontrado")
@@ -70,9 +105,17 @@ def atualizar_item_backlog(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Atualiza parcialmente um item de backlog.
+
+    Apenas campos enviados são aplicados (``exclude_unset=True``).
+
+    Autenticação/permissão: somente o autor ou ADMIN.
+    Retorno: ``BacklogResponse`` atualizado; HTTP 404 se não existir.
+    """
     db_item = backlog_service.obter_item_por_id(db=db, item_id=item_id)
     if not db_item:
         raise HTTPException(status_code=404, detail="Item do backlog não encontrado")
+    # Garante que o usuário seja o autor do item ou administrador.
     ensure_owner_or_admin(usuario, db_item.autor_id)
     return backlog_service.atualizar_item(db, db_item, dados.model_dump(exclude_unset=True))
 
@@ -84,6 +127,11 @@ def alterar_status_backlog(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Altera somente o status de um item de backlog.
+
+    Autenticação/permissão: somente o autor ou ADMIN.
+    Retorno: ``BacklogResponse`` com o novo status.
+    """
     db_item = backlog_service.obter_item_por_id(db=db, item_id=item_id)
     if not db_item:
         raise HTTPException(status_code=404, detail="Item do backlog não encontrado")
@@ -97,6 +145,11 @@ def deletar_item_backlog(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Exclui um item de backlog.
+
+    Autenticação/permissão: somente o autor ou ADMIN.
+    Retorno: ``Mensagem`` de confirmação; HTTP 404 se não existir.
+    """
     db_item = backlog_service.obter_item_por_id(db=db, item_id=item_id)
     if not db_item:
         raise HTTPException(status_code=404, detail="Item do backlog não encontrado")
