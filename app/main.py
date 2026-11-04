@@ -1,3 +1,11 @@
+"""Ponto de entrada da API Focus Solutions / Librarium.
+
+Este modulo monta a aplicacao FastAPI: carrega as configuracoes, registra o
+middleware de CORS, os tratadores de erros de banco, os endpoints de
+healthcheck e todos os routers da aplicacao. Tambem define o ciclo de vida
+(lifespan) responsavel por criar tabelas e garantir o administrador inicial.
+"""
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -31,6 +39,7 @@ from app.services import auth_service
 
 settings = get_settings()
 
+# Configuracao global de logs: nivel mais verboso em modo debug.
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -40,6 +49,13 @@ logger = logging.getLogger("focus")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    """Executa rotinas de inicializacao antes de a API comecar a atender.
+
+    Cria as tabelas quando ``auto_create_tables`` esta habilitado e garante a
+    existencia do administrador inicial. Falhas sao registradas no log sem
+    impedir a subida da aplicacao.
+    """
+    # Criacao automatica das tabelas (util em ambientes sem migracao aplicada).
     if settings.auto_create_tables:
         try:
             init_db()
@@ -47,6 +63,7 @@ async def lifespan(_: FastAPI):
         except Exception:
             logger.exception("Falha ao criar as tabelas do banco de dados")
 
+    # Garante que exista um usuario administrador para o primeiro acesso.
     try:
         with SessionLocal() as db:
             auth_service.criar_admin_inicial(db)
@@ -63,6 +80,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS: libera o frontend configurado em CORS_ORIGINS. As origens vem das
+# configuracoes para evitar abertura indiscriminada em producao.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,

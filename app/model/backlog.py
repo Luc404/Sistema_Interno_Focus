@@ -1,3 +1,9 @@
+"""Modelo do backlog de itens.
+
+Representa tarefas, melhorias e outros itens de trabalho organizados por
+prioridade, status, autor e setor responsável.
+"""
+
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
@@ -7,6 +13,8 @@ from app.database import Base
 
 
 class ItemBacklog(Base):
+    """Item do backlog com tipo, prioridade, status e vínculos de autor e setor."""
+
     __tablename__ = "items_backlog"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -17,6 +25,7 @@ class ItemBacklog(Base):
     status = Column(String(50), default="PENDENTE", nullable=False)
     data_criacao = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+    # Setor é opcional, permitindo itens sem setor específico.
     autor_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     setor_id = Column(Integer, ForeignKey("setores.id"), nullable=True)
 

@@ -1,3 +1,10 @@
+"""Serviço de arquivos da biblioteca.
+
+Centraliza o cadastro, a listagem paginada, o upload físico, a atualização,
+o download e a exclusão de arquivos, validando vínculos com categorias e
+pastas e aplicando os limites de tamanho configurados.
+"""
+
 import mimetypes
 from pathlib import Path
 from uuid import uuid4
@@ -14,6 +21,7 @@ from app.services.common_service import montar_pagina, paginar
 
 
 def obter_arquivo(db: Session, arquivo_id: int) -> Arquivo | None:
+    """Busca um arquivo pelo identificador, retornando None se não existir."""
     return db.get(Arquivo, arquivo_id)
 
 

@@ -1,3 +1,10 @@
+"""Router da biblioteca de arquivos.
+
+Expõe o cadastro, listagem paginada, consulta, download, atualização e
+exclusão de arquivos enviados pelos usuários. O upload é recebido como
+multipart/form-data e os metadados ficam associados ao usuário autenticado.
+"""
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -31,6 +38,12 @@ def upload_arquivo(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Recebe o upload do arquivo e persiste os metadados do dono autenticado.
+
+    Categoria e pasta podem ser informadas por nome legado (`categoria`) ou
+    por identificador (`categoria_id`/`pasta_id`), conforme o serviço aceitar.
+    """
+    # O vínculo com o usuário vem do token, evitando que o cliente escolha o dono.
     return arquivo_service.salvar_upload(
         db=db,
         upload=arquivo,
@@ -48,6 +61,7 @@ def cadastrar_arquivo(
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
+    """Cadastra um registro de arquivo sem upload binário (metadados apenas)."""
     return arquivo_service.criar_arquivo(db=db, arquivo_dto=arquivo, usuario_id=usuario.id)
 
 
@@ -63,6 +77,11 @@ def listar_arquivos(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ):
+    """Lista arquivos com paginação e filtros opcionais.
+
+    `skip`/`limit` controlam a paginação (limite máximo de 500 por página).
+    Os demais parâmetros apenas repassam filtros de busca ao serviço.
+    """
     return arquivo_service.listar_arquivos(
         db=db,
         skip=skip,
